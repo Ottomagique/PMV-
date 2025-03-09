@@ -143,46 +143,47 @@ def plot_consumption(y_actual, y_pred, dates):
 
 # 📌 **Lancer le calcul après sélection des variables**
 if df is not None and st.session_state.lancer_calcul:
-    st.subheader("⚙️ Analyse en cours...")
+    with st.spinner("⏳ Analyse en cours..."):
+        df[date_col] = pd.to_datetime(df[date_col])
+        X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
+        y = df[conso_col]
 
-    df[date_col] = pd.to_datetime(df[date_col])
-    X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
-    y = df[conso_col]
+        best_model = None
+        best_r2 = -1
+        best_features = []
+        best_y_pred = None
 
-    best_model = None
-    best_r2 = -1
-    best_features = []
-    best_y_pred = None
+        periodes = df[date_col].dt.to_period('M').unique()
+        if len(periodes) >= 12:
+            for i in range(len(periodes) - 11):
+                periode_actuelle = periodes[i:i+12]
+                df_subset = df[df[date_col].dt.to_period('M').isin(periode_actuelle)]
 
-    periodes = df[date_col].dt.to_period('M').unique()
-    if len(periodes) >= 12:
-        for i in range(len(periodes) - 11):
-            periode_actuelle = periodes[i:i+12]
-            df_subset = df[df[date_col].dt.to_period('M').isin(periode_actuelle)]
+                X_subset = df_subset[selected_vars]
+                y_subset = df_subset[conso_col]
 
-            X_subset = df_subset[selected_vars]
-            y_subset = df_subset[conso_col]
+                y_subset = np.array(y_subset, dtype=np.float64)
 
-            for n in range(1, max_features + 1):
-                for combo in combinations(selected_vars, n):
-                    X_temp = X_subset[list(combo)]
-                    model = LinearRegression()
-                    model.fit(X_temp, y_subset)
-                    y_pred = model.predict(X_temp)
-                    r2 = r2_score(y_subset, y_pred)
+                for n in range(1, max_features + 1):
+                    for combo in combinations(selected_vars, n):
+                        X_temp = X_subset[list(combo)]
+                        model = LinearRegression()
+                        model.fit(X_temp, y_subset)
+                        y_pred = model.predict(X_temp)
 
-                    if r2 > best_r2:
-                        best_r2 = r2
-                        best_model = model
-                        best_features = list(combo)
-                        best_y_pred = y_pred
-                        best_dates = df_subset[date_col]
+                        y_pred = np.array(y_pred, dtype=np.float64)
+                        r2 = r2_score(y_subset, y_pred)
 
-    if best_model:
-        st.success("✅ Modèle trouvé avec succès !")
-        st.markdown("### 📊 Comparaison Consommation Mesurée vs Ajustée")
-        fig = plot_consumption(y_subset, best_y_pred, best_dates)
-        st.pyplot(fig)
+                        if r2 > best_r2:
+                            best_r2 = r2
+                            best_model = model
+                            best_features = list(combo)
+                            best_y_pred = y_pred
+                            best_dates = df_subset[date_col]
+
+    st.success("✅ Résultats de l'analyse")
+    fig = plot_consumption(y_subset, best_y_pred, best_dates)
+    st.pyplot(fig)
 
 st.sidebar.markdown("---")
 st.sidebar.info("💡 Développé avec ❤️ par **Efficacité Energétique, Carbone & RSE Team** | © 2025")
