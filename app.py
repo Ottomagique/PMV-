@@ -177,6 +177,11 @@ if df is not None and st.session_state.lancer_calcul:
     st.write(f"**📈 Biais Normalisé (NMBE) :** {best_bias:.6f}")
     st.write(f"**🧩 Variables utilisées :** {', '.join(best_features)}")
 
+    # 📌 **Ajout de l'équation du modèle**
+    coefficients = [f"{coef:.4f} × {feat}" for coef, feat in zip(best_model.coef_, best_features)]
+    equation = f"Consommation = {best_model.intercept_:.4f} + " + " + ".join(coefficients)
+    st.markdown(f"**📑 Équation d'ajustement :** `{equation}`")
+
     fig = plot_consumption(y_subset, best_y_pred, best_dates)
     st.pyplot(fig)
 
