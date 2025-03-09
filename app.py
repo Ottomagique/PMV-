@@ -76,8 +76,18 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 🎯 Interface utilisateur
+# 📌 **Description de l'application**
 st.title("📊 Analyse IPMVP")
+st.markdown("""
+Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
+Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives.
+
+### **🛠️ Instructions :**
+1. **Importer un fichier Excel 📂** contenant les données de consommation.
+2. **Sélectionner la colonne de date, la consommation et les variables explicatives 📊**.
+3. **Choisir le nombre de variables à tester 🔢** (de 1 à 4).
+4. **Lancer le calcul 🚀** et obtenir le **meilleur modèle** avec une analyse graphique.
+""")
 
 # 📂 **Import du fichier et lancement du calcul**
 col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
@@ -87,6 +97,18 @@ with col1:
 
 with col2:
     lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
+
+# 📂 **Sélection des données (toujours visible même sans fichier importé)**
+st.sidebar.header("🔍 Sélection des données")
+
+date_col = st.sidebar.selectbox("📅 Nom de la donnée date", [""] + (list(df.columns) if 'df' in locals() else []))
+conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", [""] + (list(df.columns) if 'df' in locals() else []))
+
+var_options = [col for col in df.columns if col not in [date_col, conso_col]] if 'df' in locals() else []
+selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
+
+# Nombre de variables à tester
+max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
 # 📌 Lecture du fichier
 @st.cache_data
@@ -107,22 +129,11 @@ if df is not None:
     st.subheader("📊 Données chargées")
     st.dataframe(df.reset_index(drop=True))
 
-    # 📂 **Sélection des données**
-    st.sidebar.header("🔍 Sélection des données")
-
-    # 📌 Détection automatique des colonnes
-    default_date_col = next((col for col in df.columns if "date" in col.lower()), None)
-    default_conso_col = next((col for col in df.columns if "conso" in col.lower()), None)
-
-    date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns, index=df.columns.get_loc(default_date_col) if default_date_col else 0)
-    conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns, index=df.columns.get_loc(default_conso_col) if default_conso_col else 1)
-
-    # Variables explicatives
+    # 📌 Mise à jour des options des colonnes après import
+    date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns, index=0)
+    conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns, index=1)
     var_options = [col for col in df.columns if col not in [date_col, conso_col]]
     selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
-
-    # Nombre de variables à tester
-    max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
     # 📌 **Lancement du calcul seulement si le bouton est cliqué**
     if lancer_calcul:
@@ -130,6 +141,18 @@ if df is not None:
 
         X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
         y = df[conso_col]
+
+        # Nettoyage des données avant entraînement
+        if X.isnull().values.any() or np.isinf(X.values).any():
+            st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
+            st.stop()
+
+        if y.isnull().values.any() or np.isinf(y.values).any():
+            st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
+            st.stop()
+
+        X = X.apply(pd.to_numeric, errors='coerce').dropna()
+        y = pd.to_numeric(y, errors='coerce').dropna()
 
         best_model = None
         best_r2 = -1
