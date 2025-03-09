@@ -243,73 +243,6 @@ class ModelIPMVP:
             
         self.best_formula = formula
     
-    def generer_rapport_html(self):
-        """Génère un rapport structuré en HTML sur le meilleur modèle"""
-        if self.best_model is None:
-            return """
-            <div class="card" style="border-left: 5px solid #dc3545;">
-                <h3 style="color: #dc3545;">❌ Aucun modèle valide</h3>
-                <p>L'algorithme n'a pas pu trouver de modèle conforme aux critères IPMVP avec les données fournies.</p>
-            </div>
-            """
-        
-        # Formatage des métriques
-        r2_formatted = f"{self.best_r2:.4f}"
-        cv_formatted = f"{self.best_cv:.4f}"
-        bias_formatted = f"{self.best_bias:.8f}"
-        
-        # Créer le statut des critères
-        r2_status = "✅" if self.best_r2 > 0.75 else "❌"
-        cv_status = "✅" if self.best_cv < 0.2 else "❌"
-        bias_status = "✅" if abs(self.best_bias) < 0.01 else "❌"
-        
-        # Formater la liste des variables
-        variables_list = "<ul>" + "".join([f"<li>{var}</li>" for var in self.best_features]) + "</ul>"
-        
-        rapport = f"""
-        <div class="card" style="border-left: 5px solid #28a745;">
-            <h3 style="color: #28a745;">✅ Modèle IPMVP conforme</h3>
-            <p>Type de modèle: <span class="highlight">{self.best_model_type}</span></p>
-            
-            <h4>Variables sélectionnées:</h4>
-            {variables_list}
-            
-            <h4>Formule d'ajustement:</h4>
-            <div class="formula-box">
-                {self.best_formula}
-            </div>
-            
-            <h4>Métriques de performance:</h4>
-            <table style="width:100%; border-collapse: collapse;">
-                <tr style="background-color: #E0E8F0;">
-                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Métrique</th>
-                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Valeur</th>
-                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Seuil IPMVP</th>
-                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Statut</th>
-                </tr>
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;">R² (coefficient de détermination)</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{r2_formatted}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">> 0.75</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{r2_status}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;">CV(RMSE) (coefficient de variation)</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{cv_formatted}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.2</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{cv_status}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;">NMBE (biais normalisé)</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{bias_formatted}</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.01</td>
-                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{bias_status}</td>
-                </tr>
-            </table>
-        </div>
-        """
-        return rapport
-        
     def generer_rapport(self):
         """Génère un rapport en texte simple, sans HTML"""
         if self.best_model is None:
@@ -504,7 +437,8 @@ if not uploaded_file:
     
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Exemple de données")
-    st.dataframe(example_df)
+    # Affichage sans les index
+    st.dataframe(example_df.reset_index(drop=True))
     
     use_example = st.button("Utiliser ces données d'exemple")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -524,7 +458,8 @@ elif hasattr(st.session_state, 'df'):
 if df is not None:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Données chargées")
-    st.dataframe(df)
+    # Affichage sans les index
+    st.dataframe(df.reset_index(drop=True))
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Identification automatique des colonnes
@@ -577,18 +512,13 @@ if df is not None:
     # Configuration du modèle
     st.sidebar.subheader("4. Configuration du modèle")
     
-    # Correction du slider avec gestion des cas problématiques
-    if selected_vars:
-        max_vars = min(4, len(selected_vars))
-        max_features = st.sidebar.slider(
-            "Nombre maximum de variables à combiner", 
-            min_value=1, 
-            max_value=max(2, max_vars),  # Assurez-vous que max_value est au moins 2
-            value=min(2, max_vars)
-        )
-    else:
-        st.sidebar.warning("Aucune variable explicative sélectionnée. L'analyse sera limitée.")
-        max_features = 1  # Valeur par défaut si aucune variable n'est sélectionnée
+    # Correction du slider pour autoriser jusqu'à 4 variables maximum
+    max_features = st.sidebar.slider(
+        "Nombre maximum de variables à combiner", 
+        min_value=1, 
+        max_value=4,  # Toujours permettre jusqu'à 4 variables
+        value=min(2, len(selected_vars)) if selected_vars else 1
+    )
     
     # Bouton pour lancer l'analyse
     if st.sidebar.button("🚀 Lancer l'analyse IPMVP"):
@@ -647,8 +577,51 @@ if df is not None:
             st.subheader("Résultats de l'analyse IPMVP")
             
             if format_rapport == "Format visuel":
-                rapport_html = modele_ipmvp.generer_rapport_html()
-                st.markdown(rapport_html, unsafe_allow_html=True)
+                # Affichage direct du rapport formaté sans passer par une fonction générant du HTML
+                st.markdown(f"""
+                <div class="card" style="border-left: 5px solid #28a745;">
+                    <h3 style="color: #28a745;">✅ Modèle IPMVP conforme</h3>
+                    <p>Type de modèle: <span style="background-color: #e6f3ff; padding: 5px; border-radius: 3px;">{modele_ipmvp.best_model_type}</span></p>
+                    
+                    <h4>Variables sélectionnées:</h4>
+                    <ul>
+                        {"".join([f"<li>{var}</li>" for var in modele_ipmvp.best_features])}
+                    </ul>
+                    
+                    <h4>Formule d'ajustement:</h4>
+                    <div style="background-color: #E0E8F0; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0;">
+                        {modele_ipmvp.best_formula}
+                    </div>
+                    
+                    <h4>Métriques de performance:</h4>
+                    <table style="width:100%; border-collapse: collapse;">
+                        <tr style="background-color: #E0E8F0;">
+                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Métrique</th>
+                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Valeur</th>
+                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Seuil IPMVP</th>
+                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Statut</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd;">R² (coefficient de détermination)</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_r2:.4f}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">> 0.75</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd;">CV(RMSE) (coefficient de variation)</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_cv:.4f}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.2</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd;">NMBE (biais normalisé)</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_bias:.8f}</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.01</td>
+                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
+                        </tr>
+                    </table>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 rapport_texte = modele_ipmvp.generer_rapport()
                 st.text(rapport_texte)
@@ -718,7 +691,8 @@ if df is not None:
                     st.markdown("**Comparaison des consommations**: Ce graphique compare la consommation réelle mesurée avec celle calculée par le modèle.")
                 
                 with tab3:
-                    st.dataframe(results_df)
+                    # Affichage des données sans index
+                    st.dataframe(results_df.reset_index(drop=True))
                     st.markdown("**Données détaillées**: Ce tableau présente les valeurs réelles, prédites et les erreurs du modèle.")
                 
                 # Section de téléchargement des résultats
