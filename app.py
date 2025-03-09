@@ -4,7 +4,9 @@ import numpy as np
 import io
 import matplotlib.pyplot as plt
 from itertools import combinations
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import math
 
@@ -131,6 +133,63 @@ st.markdown("""
         background-color: #00485F;
         color: white;
     }
+    
+    /* Style des info-bulles */
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+        color: #00485F;
+        font-size: 14px;
+        margin-left: 4px;
+    }
+    
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 250px;
+        background-color: #00485F;
+        color: white;
+        text-align: left;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -125px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    
+    .tooltip .tooltiptext::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #00485F transparent transparent transparent;
+    }
+    
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    .model-badge {
+        display: inline-block;
+        background-color: #6DBABC;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 8px;
+    }
 
     </style>
     """, unsafe_allow_html=True)
@@ -247,8 +306,27 @@ if period_choice == "Sélectionner manuellement une période spécifique" and df
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
 selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
 
+# Type de modèle à utiliser
+model_type = st.sidebar.selectbox(
+    "🧮 Type de modèle de régression",
+    ["Linéaire", "Ridge", "Lasso", "Polynomiale"],
+    help="Sélectionnez le type de régression à utiliser pour l'analyse"
+)
+
+# Paramètres spécifiques aux modèles
+if model_type == "Ridge":
+    alpha_ridge = st.sidebar.slider("Alpha (régularisation Ridge)", 0.01, 10.0, 1.0, 0.01)
+elif model_type == "Lasso":
+    alpha_lasso = st.sidebar.slider("Alpha (régularisation Lasso)", 0.01, 1.0, 0.1, 0.01)
+elif model_type == "Polynomiale":
+    poly_degree = st.sidebar.slider("Degré du polynôme", 2, 3, 2)
+
 # Nombre de variables à tester
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
+
+# Fonction pour créer une info-bulle
+def tooltip(text, explanation):
+    return f'<span>{text} <span class="tooltip">ℹ️<span class="tooltiptext">{explanation}</span></span></span>'
 
 # Fonction pour évaluer la conformité IPMVP
 def evaluer_conformite(r2, cv_rmse):
@@ -329,8 +407,26 @@ if df is not None and lancer_calcul:
                     X_subset = X[list(combo)]
                     
                     try:
-                        model = LinearRegression()
+                        # Création du modèle selon le type sélectionné
+                        if model_type == "Linéaire":
+                            model = LinearRegression()
+                            model_name = "Régression linéaire"
+                        elif model_type == "Ridge":
+                            model = Ridge(alpha=alpha_ridge)
+                            model_name = f"Régression Ridge (α={alpha_ridge})"
+                        elif model_type == "Lasso":
+                            model = Lasso(alpha=alpha_lasso)
+                            model_name = f"Régression Lasso (α={alpha_lasso})"
+                        elif model_type == "Polynomiale":
+                            model = Pipeline([
+                                ('poly', PolynomialFeatures(degree=poly_degree)),
+                                ('linear', LinearRegression())
+                            ])
+                            model_name = f"Régression polynomiale (degré {poly_degree})"
+                        
                         model.fit(X_subset, y)
+                        
+                        # Prédictions selon le type de modèle
                         y_pred = model.predict(X_subset)
                         r2 = r2_score(y, y_pred)
                         
@@ -349,9 +445,20 @@ if df is not None and lancer_calcul:
                             cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
                             bias = np.mean(y_pred - y) / np.mean(y) * 100
                             
-                            # Récupération des coefficients
-                            coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                            intercept = model.intercept_
+                            # Récupération des coefficients selon le type de modèle
+                            if model_type == "Linéaire":
+                                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                                intercept = model.intercept_
+                            elif model_type in ["Ridge", "Lasso"]:
+                                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                                intercept = model.intercept_
+                            elif model_type == "Polynomiale":
+                                # Pour le modèle polynomial, nous gardons une représentation simplifiée
+                                linear_model = model.named_steps['linear']
+                                poly = model.named_steps['poly']
+                                feature_names = poly.get_feature_names_out(input_features=combo)
+                                coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+                                intercept = linear_model.intercept_
                             
                             # Statut de conformité IPMVP
                             conformite, classe = evaluer_conformite(r2, cv_rmse)
@@ -367,7 +474,9 @@ if df is not None and lancer_calcul:
                                 'coefficients': coefs,
                                 'intercept': intercept,
                                 'conformite': conformite,
-                                'classe': classe
+                                'classe': classe,
+                                'model_type': model_type,
+                                'model_name': model_name
                             }
                     except:
                         continue
@@ -431,8 +540,26 @@ if df is not None and lancer_calcul:
         for n in range(1, max_features + 1):
             for combo in combinations(selected_vars, n):
                 X_subset = X[list(combo)]
-                model = LinearRegression()
+                # Création du modèle selon le type sélectionné
+                if model_type == "Linéaire":
+                    model = LinearRegression()
+                    model_name = "Régression linéaire"
+                elif model_type == "Ridge":
+                    model = Ridge(alpha=alpha_ridge)
+                    model_name = f"Régression Ridge (α={alpha_ridge})"
+                elif model_type == "Lasso":
+                    model = Lasso(alpha=alpha_lasso)
+                    model_name = f"Régression Lasso (α={alpha_lasso})"
+                elif model_type == "Polynomiale":
+                    model = Pipeline([
+                        ('poly', PolynomialFeatures(degree=poly_degree)),
+                        ('linear', LinearRegression())
+                    ])
+                    model_name = f"Régression polynomiale (degré {poly_degree})"
+                
                 model.fit(X_subset, y)
+                
+                # Prédictions selon le type de modèle
                 y_pred = model.predict(X_subset)
                 
                 # Calcul des métriques
@@ -442,9 +569,20 @@ if df is not None and lancer_calcul:
                 cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
                 bias = np.mean(y_pred - y) / np.mean(y) * 100
                 
-                # Récupération des coefficients
-                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                intercept = model.intercept_
+                # Récupération des coefficients selon le type de modèle
+                if model_type == "Linéaire":
+                    coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                    intercept = model.intercept_
+                elif model_type in ["Ridge", "Lasso"]:
+                    coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                    intercept = model.intercept_
+                elif model_type == "Polynomiale":
+                    # Pour le modèle polynomial, nous gardons une représentation simplifiée
+                    linear_model = model.named_steps['linear']
+                    poly = model.named_steps['poly']
+                    feature_names = poly.get_feature_names_out(input_features=combo)
+                    coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+                    intercept = linear_model.intercept_
                 
                 # Statut de conformité IPMVP
                 conformite, classe = evaluer_conformite(r2, cv_rmse)
@@ -461,7 +599,9 @@ if df is not None and lancer_calcul:
                     'intercept': intercept,
                     'conformite': conformite,
                     'classe': classe,
-                    'model': model
+                    'model': model,
+                    'model_type': model_type,
+                    'model_name': model_name
                 }
                 all_models.append(model_info)
 
@@ -492,11 +632,24 @@ if df is not None and lancer_calcul:
             st.subheader("📊 Résultats du modèle")
             st.markdown(f"""
             <div class="metrics-card">
-                <h4>Modèle sélectionné: Régression linéaire multiple</h4>
+                <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
                 <p>Variables utilisées: {', '.join(best_features)}</p>
                 <p>Conformité IPMVP: <span class="conformity-{best_metrics['classe']}">{best_metrics['conformite']}</span></p>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Créer l'équation adaptée selon le type de modèle
+            if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
+                equation = f"Consommation = {best_metrics['intercept']:.4f}"
+                for feature in best_features:
+                    coef = best_metrics['coefficients'][feature]
+                    sign = "+" if coef >= 0 else ""
+                    equation += f" {sign} {coef:.4f} × {feature}"
+            elif best_metrics['model_type'] == "Polynomiale":
+                equation = f"Consommation = {best_metrics['intercept']:.4f}"
+                for feature_name, coef in best_metrics['coefficients'].items():
+                    sign = "+" if coef >= 0 else ""
+                    equation += f" {sign} {coef:.4f} × {feature_name}"
             
             st.markdown(f"""
             <div class="equation-box">
@@ -506,18 +659,35 @@ if df is not None and lancer_calcul:
             """, unsafe_allow_html=True)
         
         with col2:
-            # Tableau des métriques
-            metrics_df = pd.DataFrame({
-                'Métrique': ['R²', 'RMSE', 'CV(RMSE)', 'MAE', 'Biais (%)'],
-                'Valeur': [
-                    f"{best_metrics['r2']:.4f}",
-                    f"{best_metrics['rmse']:.4f}",
-                    f"{best_metrics['cv_rmse']:.4f}",
-                    f"{best_metrics['mae']:.4f}",
-                    f"{best_metrics['bias']:.2f}"
-                ]
-            })
-            st.table(metrics_df)
+            # Tableau des métriques avec info-bulles
+            st.markdown(f"""
+            <table style="width:100%">
+                <tr>
+                    <th>Métrique</th>
+                    <th>Valeur</th>
+                </tr>
+                <tr>
+                    <td>{tooltip("R²", "Coefficient de détermination : mesure la proportion de variance de la variable dépendante qui est prédite à partir des variables indépendantes. Plus cette valeur est proche de 1, meilleur est l'ajustement du modèle aux données.")}</td>
+                    <td>{best_metrics['r2']:.4f}</td>
+                </tr>
+                <tr>
+                    <td>{tooltip("RMSE", "Root Mean Square Error (Erreur quadratique moyenne) : mesure l'écart-type des résidus (erreurs de prédiction). Exprimée dans la même unité que la variable dépendante.")}</td>
+                    <td>{best_metrics['rmse']:.4f}</td>
+                </tr>
+                <tr>
+                    <td>{tooltip("CV(RMSE)", "Coefficient de Variation du RMSE : exprime le RMSE en pourcentage de la moyenne observée, permettant de comparer la précision entre différents modèles indépendamment de l'échelle.")}</td>
+                    <td>{best_metrics['cv_rmse']:.4f}</td>
+                </tr>
+                <tr>
+                    <td>{tooltip("MAE", "Mean Absolute Error (Erreur absolue moyenne) : moyenne des valeurs absolues des erreurs. Moins sensible aux valeurs extrêmes que le RMSE.")}</td>
+                    <td>{best_metrics['mae']:.4f}</td>
+                </tr>
+                <tr>
+                    <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
+                    <td>{best_metrics['bias']:.2f}</td>
+                </tr>
+            </table>
+            """, unsafe_allow_html=True)
 
         # 🔹 Graphique de consommation
         st.subheader("📈 Visualisation des résultats")
@@ -595,26 +765,45 @@ if df is not None and lancer_calcul:
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
             st.pyplot(fig3)
             
-        # Ajout d'un expander pour expliquer l'interprétation des graphiques
-        with st.expander("📚 Comment interpréter ces graphiques ?"):
+        # Ajout d'un expander pour expliquer les différents modèles de régression
+        with st.expander("📚 Interprétation des différents modèles de régression"):
             st.markdown("""
-            ### Interprétation des visualisations
+            ### Types de modèles de régression
             
-            **1. Graphique Consommation Mesurée vs Ajustée**
-            - Compare les valeurs réelles (barres bleues) avec les prédictions du modèle (ligne verte)
-            - Un modèle idéal montre une ligne qui suit étroitement les sommets des barres
+            **Régression linéaire multiple**
+            - Modèle le plus courant pour l'IPMVP
+            - Établit une relation linéaire : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ
+            - Forces : Simple à interpréter, rapide à calculer
+            - Limites : Ne peut capturer que des relations linéaires
             
-            **2. Graphique de dispersion**
-            - Les points doivent s'aligner le long de la ligne diagonale
-            - Des points éloignés de la ligne indiquent des prédictions moins précises
-            - Plus les points sont proches de la diagonale, meilleur est le modèle
+            **Régression Ridge**
+            - Ajoute une pénalité à la somme des carrés des coefficients
+            - Formule : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ, avec minimisation de (résidus² + α × somme des coefficients²)
+            - Forces : Gère mieux les variables corrélées, réduit le risque de surapprentissage
+            - Limites : Tous les coefficients sont réduits mais aucun n'est éliminé
             
-            **3. Analyse des Résidus**
-            - Montre l'erreur pour chaque observation (valeur réelle - valeur prédite)
-            - Idéalement, les résidus devraient:
-              - Être répartis de façon aléatoire autour de zéro
-              - Ne pas présenter de tendance ou de motif visible
-              - Avoir une distribution équilibrée au-dessus et en-dessous de zéro
+            **Régression Lasso**
+            - Ajoute une pénalité à la somme des valeurs absolues des coefficients
+            - Formule : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ, avec minimisation de (résidus² + α × somme des |coefficients|)
+            - Forces : Peut éliminer complètement des variables non pertinentes (coefficients = 0)
+            - Limites : Peut être instable si les variables sont très corrélées
+            
+            **Régression polynomiale**
+            - Introduit des termes non linéaires (carrés, cubes, produits croisés)
+            - Formule : Y = a₀ + a₁X₁ + a₂X₁² + a₃X₂ + a₄X₂² + a₅X₁X₂ + ...
+            - Forces : Peut capturer des relations non linéaires
+            - Limites : Risque élevé de surapprentissage, interprétation plus complexe
+            """)
+            
+            st.info("""
+            **Note sur le choix du modèle pour l'IPMVP**
+            
+            Le protocole IPMVP ne prescrit pas un type spécifique de modèle de régression. Le choix doit être basé sur :
+            - La nature des relations entre variables (linéaires ou non)
+            - La qualité des métriques (R², CV, biais)
+            - La simplicité d'interprétation (importante pour communiquer les résultats)
+            
+            Pour la conformité, IPMVP recommande généralement que le modèle choisi ait un R² ≥ 0.75 et un CV(RMSE) ≤ 15%, quelle que soit la méthode utilisée.
             """)
 
         
@@ -625,6 +814,7 @@ if df is not None and lancer_calcul:
         for i, model in enumerate(all_models[:10]):  # Afficher les 10 meilleurs modèles
             models_summary.append({
                 "Rang": i+1,
+                "Type": model['model_name'],
                 "Variables": ", ".join(model['features']),
                 "R²": f"{model['r2']:.4f}",
                 "CV(RMSE)": f"{model['cv_rmse']:.4f}",
@@ -639,15 +829,24 @@ if df is not None and lancer_calcul:
 
 st.sidebar.markdown("---")
 
-# Ajout d'informations sur la méthodologie IPMVP
-st.sidebar.subheader("📘 Méthodologie IPMVP")
-st.sidebar.markdown("""
-La méthodologie IPMVP (International Performance Measurement and Verification Protocol) évalue la qualité d'un modèle de régression selon ces critères :
+# Ajout d'informations sur la méthodologie IPMVP avec infobulles
+st.sidebar.markdown(f"""
+### 📘 Méthodologie IPMVP
+La méthodologie IPMVP évalue la qualité d'un modèle de régression selon ces critères :
 
-- **R² ≥ 0.75** : Excellente corrélation
-- **CV(RMSE) ≤ 15%** : Excellente précision
-- **Biais < 5%** : Ajustement équilibré
-""")
+- {tooltip("R² ≥ 0.75", "Le coefficient de détermination R² mesure la proportion de la variance expliquée par le modèle. Une valeur de 0.75 signifie que 75% de la variabilité des données est expliquée par le modèle.")} : Excellente corrélation
+- {tooltip("CV(RMSE) ≤ 15%", "Le coefficient de variation de l'erreur quadratique moyenne représente la dispersion relative des résidus. Il est calculé en divisant le RMSE par la moyenne des observations.")} : Excellente précision
+- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs.")} : Ajustement équilibré
+""", unsafe_allow_html=True)
+
+# Information sur les types de régression
+st.sidebar.markdown(f"""
+### 📊 Types de modèles
+- {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé dans l'IPMVP.")}
+- {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Idéal quand les variables sont corrélées entre elles.")}
+- {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Utile quand certaines variables pourraient être non pertinentes.")}
+- {tooltip("Régression polynomiale", "Permet de modéliser des relations non linéaires en introduisant des termes polynomiaux (carrés, cubes) des variables explicatives.")}
+""", unsafe_allow_html=True)
 
 # Pied de page amélioré
 st.markdown("---")
