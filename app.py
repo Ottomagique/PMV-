@@ -18,13 +18,108 @@ st.set_page_config(
     layout="wide"
 )
 
+# Ajouter du CSS personnalisé
+st.markdown("""
+<style>
+    .reportview-container {
+        background-color: #F5F7FA;
+    }
+    .main {
+        background-color: #F5F7FA;
+    }
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        background-color: white;
+    }
+    .metric-container {
+        background-color: #E0E8F0;
+        border-radius: 5px;
+        padding: 15px;
+        text-align: center;
+        margin: 5px;
+    }
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #1E88E5;
+    }
+    .metric-label {
+        font-size: 14px;
+        color: #666;
+    }
+    .formula-box {
+        background-color: #E0E8F0;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        margin: 10px 0;
+    }
+    h1, h2, h3 {
+        color: #1E88E5;
+    }
+    .highlight {
+        background-color: #e6f3ff;
+        padding: 5px;
+        border-radius: 3px;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #E0E8F0;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1E88E5;
+        color: white;
+    }
+    
+    /* Amélioration des tableaux */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 25px 0;
+        font-size: 14px;
+        border-radius: 5px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    }
+    th {
+        background-color: #1E88E5;
+        color: white;
+        text-align: left;
+        padding: 12px 15px;
+    }
+    td {
+        padding: 12px 15px;
+    }
+    tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    tr:hover {
+        background-color: #e6f3ff;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Titre de l'application
 st.title("📊 Analyse IPMVP")
 st.markdown("""
-Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.  
-Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
-plus des colonnes optionnelles pour les variables explicatives.
-""")
+<div class="card">
+    <p>Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.</p>
+    <p>Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
+    plus des colonnes optionnelles pour les variables explicatives comme les DJU, effectifs, etc.</p>
+    <p>Le modèle analysera automatiquement 12 mois glissants et trouvera la meilleure combinaison de variables.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Définition des fonctions d'analyse IPMVP
 @st.cache_data
@@ -149,20 +244,69 @@ class ModelIPMVP:
         self.best_formula = formula
     
     def generer_rapport(self):
-        """Génère un rapport sur le meilleur modèle"""
+        """Génère un rapport structuré sur le meilleur modèle"""
         if self.best_model is None:
-            return "❌ Aucun modèle valide n'a pu être entraîné."
+            return """
+            <div class="card" style="border-left: 5px solid #dc3545;">
+                <h3 style="color: #dc3545;">❌ Aucun modèle valide</h3>
+                <p>L'algorithme n'a pas pu trouver de modèle conforme aux critères IPMVP avec les données fournies.</p>
+            </div>
+            """
+        
+        # Formatage des métriques
+        r2_formatted = f"{self.best_r2:.4f}"
+        cv_formatted = f"{self.best_cv:.4f}"
+        bias_formatted = f"{self.best_bias:.8f}"
+        
+        # Créer le statut des critères
+        r2_status = "✅" if self.best_r2 > 0.75 else "❌"
+        cv_status = "✅" if self.best_cv < 0.2 else "❌"
+        bias_status = "✅" if abs(self.best_bias) < 0.01 else "❌"
+        
+        # Formater la liste des variables
+        variables_list = "<ul>" + "".join([f"<li>{var}</li>" for var in self.best_features]) + "</ul>"
         
         rapport = f"""
-        ✅ RAPPORT IPMVP - {self.best_model_type}
-        ------------------------------------------------------------
-        📊 Variables sélectionnées : {self.best_features}
-        📊 Équation du modèle : {self.best_formula}
-        📈 R² : {self.best_r2:.4f} (seuil IPMVP > 0.75)
-        📊 CV(RMSE) : {self.best_cv:.4f} (seuil IPMVP < 0.2)
-        📊 NMBE (Biais) : {self.best_bias:.8f} (seuil IPMVP < 0.01)
-        
-        ✅ Modèle conforme aux critères IPMVP 🎯
+        <div class="card" style="border-left: 5px solid #28a745;">
+            <h3 style="color: #28a745;">✅ Modèle IPMVP conforme</h3>
+            <p>Type de modèle: <span class="highlight">{self.best_model_type}</span></p>
+            
+            <h4>Variables sélectionnées:</h4>
+            {variables_list}
+            
+            <h4>Formule d'ajustement:</h4>
+            <div class="formula-box">
+                {self.best_formula}
+            </div>
+            
+            <h4>Métriques de performance:</h4>
+            <table style="width:100%; border-collapse: collapse;">
+                <tr style="background-color: #E0E8F0;">
+                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Métrique</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Valeur</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Seuil IPMVP</th>
+                    <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Statut</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">R² (coefficient de détermination)</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{r2_formatted}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">> 0.75</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{r2_status}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">CV(RMSE) (coefficient de variation)</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{cv_formatted}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.2</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{cv_status}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;">NMBE (biais normalisé)</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{bias_formatted}</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.01</td>
+                    <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{bias_status}</td>
+                </tr>
+            </table>
+        </div>
         """
         return rapport
     
@@ -183,7 +327,8 @@ class ModelIPMVP:
         results_df = pd.DataFrame({
             'Valeur_Réelle': y,
             'Valeur_Prédite': y_pred,
-            'Erreur': y - y_pred
+            'Erreur': y - y_pred,
+            'Erreur_Pourcentage': (y - y_pred) / y * 100 if np.mean(y) != 0 else np.zeros_like(y)
         })
         
         # Ajouter les dates si disponibles
@@ -197,31 +342,39 @@ class ModelIPMVP:
     
     def _creer_graphiques(self, results_df):
         """Crée et retourne les visualisations"""
+        # Utiliser un style plus moderne pour les graphiques
+        plt.style.use('seaborn-v0_8-whitegrid')
+        
         # Graphique 1: Analyse du modèle
         fig1, axes = plt.subplots(2, 2, figsize=(12, 10))
+        fig1.suptitle('Analyse du modèle IPMVP', fontsize=16, y=0.98)
         
         # Valeurs réelles vs prédites
-        axes[0, 0].scatter(results_df['Valeur_Réelle'], results_df['Valeur_Prédite'], alpha=0.6)
-        axes[0, 0].plot([results_df['Valeur_Réelle'].min(), results_df['Valeur_Réelle'].max()], 
-                     [results_df['Valeur_Réelle'].min(), results_df['Valeur_Réelle'].max()], 'r--')
-        axes[0, 0].set_title('Valeurs Réelles vs Prédites')
+        axes[0, 0].scatter(results_df['Valeur_Réelle'], results_df['Valeur_Prédite'], alpha=0.7, 
+                         color='#1E88E5', edgecolors='navy')
+        min_val = min(results_df['Valeur_Réelle'].min(), results_df['Valeur_Prédite'].min())
+        max_val = max(results_df['Valeur_Réelle'].max(), results_df['Valeur_Prédite'].max())
+        axes[0, 0].plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.7)
+        axes[0, 0].set_title('Valeurs Réelles vs Prédites', fontsize=12)
         axes[0, 0].set_xlabel('Valeurs Réelles')
         axes[0, 0].set_ylabel('Valeurs Prédites')
-        axes[0, 0].grid(True)
+        axes[0, 0].grid(True, alpha=0.3)
         
         # Distribution des erreurs
-        sns.histplot(results_df['Erreur'], kde=True, ax=axes[0, 1])
-        axes[0, 1].set_title('Distribution des Erreurs')
+        sns.histplot(results_df['Erreur'], kde=True, ax=axes[0, 1], color='#1E88E5', bins=10)
+        axes[0, 1].axvline(x=0, color='r', linestyle='--', alpha=0.7)
+        axes[0, 1].set_title('Distribution des Erreurs', fontsize=12)
         axes[0, 1].set_xlabel('Erreur')
-        axes[0, 1].grid(True)
+        axes[0, 1].grid(True, alpha=0.3)
         
         # Erreurs vs valeurs prédites
-        axes[1, 0].scatter(results_df['Valeur_Prédite'], results_df['Erreur'], alpha=0.6)
-        axes[1, 0].axhline(y=0, color='r', linestyle='--')
-        axes[1, 0].set_title('Erreurs vs Valeurs Prédites')
+        axes[1, 0].scatter(results_df['Valeur_Prédite'], results_df['Erreur'], alpha=0.7,
+                         color='#1E88E5', edgecolors='navy')
+        axes[1, 0].axhline(y=0, color='r', linestyle='--', alpha=0.7)
+        axes[1, 0].set_title('Erreurs vs Valeurs Prédites', fontsize=12)
         axes[1, 0].set_xlabel('Valeurs Prédites')
         axes[1, 0].set_ylabel('Erreur')
-        axes[1, 0].grid(True)
+        axes[1, 0].grid(True, alpha=0.3)
         
         # Importance des variables
         if len(self.best_features) > 0:
@@ -230,46 +383,50 @@ class ModelIPMVP:
                 'Coefficient': np.abs(self.best_coefficients)
             })
             coefs = coefs.sort_values('Coefficient', ascending=False)
-            sns.barplot(x='Coefficient', y='Variable', data=coefs, ax=axes[1, 1])
-            axes[1, 1].set_title('Importance des Variables')
-            axes[1, 1].grid(True)
+            barplot = sns.barplot(x='Coefficient', y='Variable', data=coefs, ax=axes[1, 1], palette=['#1E88E5'])
+            axes[1, 1].set_title('Importance des Variables', fontsize=12)
+            axes[1, 1].grid(True, alpha=0.3)
+            
+            # Ajouter les valeurs sur les barres
+            for i, v in enumerate(coefs['Coefficient']):
+                axes[1, 1].text(v + 0.01, i, f"{v:.4f}", va='center')
         
         plt.tight_layout()
         
         # Graphique 2: Consommation mesurée vs calculée
-        fig2 = plt.figure(figsize=(12, 6))
+        fig2 = plt.figure(figsize=(14, 7))
         
         if 'Date' in results_df.columns:
             # Trier par date
             results_df = results_df.sort_values('Date')
             
-            # Barres pour les valeurs réelles
-            plt.bar(range(len(results_df)), results_df['Valeur_Réelle'], color='royalblue', 
-                   width=0.6, label='Conso mesurée')
+            # Créer un graphique plus élégant
+            plt.bar(range(len(results_df)), results_df['Valeur_Réelle'], color='#4285F4', 
+                   width=0.6, label='Consommation mesurée', alpha=0.7)
             
-            # Ligne pour les valeurs prédites
-            plt.plot(range(len(results_df)), results_df['Valeur_Prédite'], color='orangered',
-                    marker='o', linestyle='-', linewidth=2, markersize=8, label='Conso calculée')
+            plt.plot(range(len(results_df)), results_df['Valeur_Prédite'], color='#EA4335',
+                    marker='o', linestyle='-', linewidth=2.5, markersize=8, label='Consommation ajustée')
             
             # Formater l'axe des x avec les dates
             date_labels = [d.strftime('%b-%y') if hasattr(d, 'strftime') else d for d in results_df['Date']]
             plt.xticks(range(len(results_df)), date_labels, rotation=45)
         else:
-            plt.bar(range(len(results_df)), results_df['Valeur_Réelle'], color='royalblue', 
-                   width=0.6, label='Conso mesurée')
-            plt.plot(range(len(results_df)), results_df['Valeur_Prédite'], color='orangered',
-                    marker='o', linestyle='-', linewidth=2, markersize=8, label='Conso calculée')
+            plt.bar(range(len(results_df)), results_df['Valeur_Réelle'], color='#4285F4', 
+                   width=0.6, label='Consommation mesurée', alpha=0.7)
+            plt.plot(range(len(results_df)), results_df['Valeur_Prédite'], color='#EA4335',
+                    marker='o', linestyle='-', linewidth=2.5, markersize=8, label='Consommation ajustée')
         
-        plt.title('Comparaison Consommation Mesurée vs Calculée')
+        plt.title('Comparaison Consommation Mesurée vs Ajustée', fontsize=16)
         plt.ylabel('Consommation')
-        plt.legend()
-        plt.grid(True, axis='y')
+        plt.legend(fontsize=12)
+        plt.grid(True, axis='y', alpha=0.3)
         
         # Ajouter la formule d'ajustement
         plt.figtext(0.5, 0.01, f"Formule d'ajustement: {self.best_formula}", 
-                   ha='center', fontsize=10, bbox={"facecolor":"white", "alpha":0.8, "pad":5})
+                   ha='center', fontsize=11, bbox={"facecolor":"#E0E8F0", "alpha":0.8, "pad":5, 
+                                                 "boxstyle":"round,pad=0.5"})
         
-        plt.tight_layout()
+        plt.tight_layout(pad=3)
         
         return fig1, fig2
 
@@ -315,10 +472,13 @@ if not uploaded_file:
     }
     example_df = pd.DataFrame(example_data)
     
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Exemple de données")
     st.dataframe(example_df)
     
     use_example = st.button("Utiliser ces données d'exemple")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     if use_example:
         st.session_state.df = example_df
         st.success("Données d'exemple chargées!")
@@ -332,8 +492,10 @@ elif hasattr(st.session_state, 'df'):
     df = st.session_state.df
 
 if df is not None:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Données chargées")
     st.dataframe(df)
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Identification automatique des colonnes
     date_col = None
@@ -417,7 +579,8 @@ if df is not None:
         # Afficher la période analysée
         start_date = df_analysis[date_col].min().strftime('%Y-%m-%d')
         end_date = df_analysis[date_col].max().strftime('%Y-%m-%d')
-        st.write(f"**Période analysée**: du {start_date} au {end_date}")
+        st.markdown(f'<div class="card"><p><strong>Période analysée</strong>: du {start_date} au {end_date}</p></div>', 
+                  unsafe_allow_html=True)
         
         # Préparation des données pour l'analyse
         X = df_analysis[selected_vars] if selected_vars else pd.DataFrame(index=df_analysis.index)
@@ -450,7 +613,46 @@ if df is not None:
             # Afficher le rapport
             st.subheader("Résultats de l'analyse IPMVP")
             rapport = modele_ipmvp.generer_rapport()
-            st.text(rapport)
+            st.markdown(rapport, unsafe_allow_html=True)
+            
+            # Ajout d'un résumé avec des métriques visuelles
+            st.subheader("Résumé des performances")
+            
+            # Créer une mise en page en colonnes pour les métriques
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    label="R² (Qualité d'ajustement)",
+                    value=f"{modele_ipmvp.best_r2:.4f}",
+                    delta="Bon" if modele_ipmvp.best_r2 > 0.8 else ("Acceptable" if modele_ipmvp.best_r2 > 0.75 else "Insuffisant")
+                )
+            
+            with col2:
+                st.metric(
+                    label="CV(RMSE) (Précision)",
+                    value=f"{modele_ipmvp.best_cv:.4f}",
+                    delta="Bon" if modele_ipmvp.best_cv < 0.15 else ("Acceptable" if modele_ipmvp.best_cv < 0.2 else "Insuffisant"),
+                    delta_color="inverse"
+                )
+            
+            with col3:
+                st.metric(
+                    label="NMBE (Biais)",
+                    value=f"{modele_ipmvp.best_bias:.6f}",
+                    delta="Excellent" if abs(modele_ipmvp.best_bias) < 0.005 else ("Bon" if abs(modele_ipmvp.best_bias) < 0.01 else "Insuffisant"),
+                    delta_color="inverse"
+                )
+            
+            # Informations supplémentaires sur le modèle
+            st.markdown(f"""
+            <div class="card">
+                <h4>Interprétation du modèle</h4>
+                <p>Le modèle utilise <b>{len(modele_ipmvp.best_features)}</b> variables pour expliquer les variations de consommation.</p>
+                <p>Type de modèle: <b>{modele_ipmvp.best_model_type}</b></p>
+                <p>Ce modèle explique <b>{modele_ipmvp.best_r2*100:.1f}%</b> des variations de la consommation.</p>
+            </div>
+            """, unsafe_allow_html=True)
             
             # Visualisations
             results_df, fig1, fig2 = modele_ipmvp.visualiser_resultats(X, y, dates=df_analysis[date_col])
@@ -458,36 +660,77 @@ if df is not None:
             if fig1 and fig2:
                 st.subheader("Visualisation des résultats")
                 
-                # Afficher les graphiques
-                st.pyplot(fig1)
-                st.pyplot(fig2)
+                # Créer des onglets pour les différentes visualisations
+                tab1, tab2, tab3 = st.tabs(["📊 Modèle", "📈 Consommation", "📋 Données"])
                 
-                # Téléchargement des résultats
+                with tab1:
+                    st.pyplot(fig1)
+                    st.markdown("**Analyse du modèle**: Ces graphiques montrent la qualité de l'ajustement du modèle.")
+                
+                with tab2:
+                    st.pyplot(fig2)
+                    st.markdown("**Comparaison des consommations**: Ce graphique compare la consommation réelle mesurée avec celle calculée par le modèle.")
+                
+                with tab3:
+                    st.dataframe(results_df)
+                    st.markdown("**Données détaillées**: Ce tableau présente les valeurs réelles, prédites et les erreurs du modèle.")
+                
+                # Section de téléchargement des résultats
+                st.markdown("""
+                <div class="card">
+                    <h4>Téléchargement des résultats</h4>
+                    <p>Vous pouvez télécharger les résultats au format Excel, incluant les données originales, 
+                    les résultats du modèle et un résumé du rapport.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Préparation des données pour l'export
                 buffer = io.BytesIO()
                 
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     df.to_excel(writer, sheet_name="Données d'origine", index=False)
-                    results_df.to_excel(writer, sheet_name="Résultats", index=False)
+                    results_df.to_excel(writer, sheet_name="Résultats du modèle", index=False)
+                    
+                    # Créer un résumé pour l'export
+                    resume_data = {
+                        "Métrique": ["Type de modèle", "Variables", "R²", "CV(RMSE)", "NMBE (Biais)", "Formule"],
+                        "Valeur": [
+                            modele_ipmvp.best_model_type,
+                            ", ".join(modele_ipmvp.best_features),
+                            f"{modele_ipmvp.best_r2:.4f}",
+                            f"{modele_ipmvp.best_cv:.4f}",
+                            f"{modele_ipmvp.best_bias:.8f}",
+                            modele_ipmvp.best_formula
+                        ]
+                    }
+                    pd.DataFrame(resume_data).to_excel(writer, sheet_name="Résumé", index=False)
                 
-                st.download_button(
-                    label="📥 Télécharger les résultats",
-                    data=buffer.getvalue(),
-                    file_name="resultats_ipmvp.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                # Bouton de téléchargement avec une présentation améliorée
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.download_button(
+                        label="📥 Télécharger le rapport complet (Excel)",
+                        data=buffer.getvalue(),
+                        file_name=f"rapport_ipmvp_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
             else:
                 st.error("Impossible de générer les visualisations.")
         else:
             status_text.text("Analyse terminée, mais aucun modèle conforme trouvé.")
             progress_bar.progress(1.0)
-            st.warning("""
-            Aucun modèle conforme aux critères IPMVP n'a pu être trouvé avec ces données. 
-            
-            Suggestions:
-            - Vérifiez que vos données couvrent au moins 12 mois complets
-            - Ajoutez plus de variables explicatives (comme les DJU)
-            - Assurez-vous que vos variables explicatives sont corrélées avec la consommation
-            """)
+            st.markdown("""
+            <div class="card" style="border-left: 5px solid #FFC107;">
+                <h3 style="color: #FFC107;">⚠️ Aucun modèle conforme</h3>
+                <p>Aucun modèle conforme aux critères IPMVP n'a pu être trouvé avec ces données.</p>
+                <h4>Suggestions:</h4>
+                <ul>
+                    <li>Vérifiez que vos données couvrent au moins 12 mois complets</li>
+                    <li>Ajoutez plus de variables explicatives (comme les DJU)</li>
+                    <li>Assurez-vous que vos variables explicatives sont corrélées avec la consommation</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
 # Footer
 st.sidebar.markdown("---")
