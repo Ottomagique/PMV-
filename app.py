@@ -317,11 +317,23 @@ model_type = st.sidebar.selectbox(
 
 # Paramètres spécifiques aux modèles
 if model_type == "Ridge":
-    alpha_ridge = st.sidebar.slider("Alpha (régularisation Ridge)", 0.01, 10.0, 1.0, 0.01)
+    alpha_ridge = st.sidebar.slider(
+        "Alpha (régularisation Ridge)", 
+        0.01, 10.0, 1.0, 0.01,
+        help="Le paramètre alpha contrôle l'intensité de la régularisation. Une valeur plus élevée réduit davantage les coefficients pour éviter le surapprentissage."
+    )
 elif model_type == "Lasso":
-    alpha_lasso = st.sidebar.slider("Alpha (régularisation Lasso)", 0.01, 1.0, 0.1, 0.01)
+    alpha_lasso = st.sidebar.slider(
+        "Alpha (régularisation Lasso)", 
+        0.01, 1.0, 0.1, 0.01,
+        help="Le paramètre alpha contrôle l'intensité de la régularisation. Lasso peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables."
+    )
 elif model_type == "Polynomiale":
-    poly_degree = st.sidebar.slider("Degré du polynôme", 2, 3, 2)
+    poly_degree = st.sidebar.slider(
+        "Degré du polynôme", 
+        2, 3, 2,
+        help="Le degré du polynôme détermine la complexité des relations non linéaires. Un degré 2 inclut les termes quadratiques (x²), un degré 3 inclut également les termes cubiques (x³)."
+    )
 
 # Nombre de variables à tester
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
@@ -918,35 +930,41 @@ if df is not None and lancer_calcul:
             - Établit une relation linéaire : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ
             - Forces : Simple à interpréter, rapide à calculer
             - Limites : Ne peut capturer que des relations linéaires
+            - Statut IPMVP : Explicitement mentionné et recommandé dans le protocole
             
             **Régression Ridge**
             - Ajoute une pénalité à la somme des carrés des coefficients
             - Formule : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ, avec minimisation de (résidus² + α × somme des coefficients²)
             - Forces : Gère mieux les variables corrélées, réduit le risque de surapprentissage
             - Limites : Tous les coefficients sont réduits mais aucun n'est éliminé
+            - Statut IPMVP : Acceptable si les critères statistiques sont respectés et si le modèle reste documentable
             
             **Régression Lasso**
             - Ajoute une pénalité à la somme des valeurs absolues des coefficients
             - Formule : Y = a₀ + a₁X₁ + a₂X₂ + ... + aₙXₙ, avec minimisation de (résidus² + α × somme des |coefficients|)
             - Forces : Peut éliminer complètement des variables non pertinentes (coefficients = 0)
             - Limites : Peut être instable si les variables sont très corrélées
+            - Statut IPMVP : Acceptable et peut même être préférable pour des modèles plus simples et robustes
             
             **Régression polynomiale**
             - Introduit des termes non linéaires (carrés, cubes, produits croisés)
             - Formule : Y = a₀ + a₁X₁ + a₂X₁² + a₃X₂ + a₄X₂² + a₅X₁X₂ + ...
             - Forces : Peut capturer des relations non linéaires
             - Limites : Risque élevé de surapprentissage, interprétation plus complexe
+            - Statut IPMVP : Acceptable si les relations physiques sont plausibles et documentées
             """)
             
             st.info("""
-            **Note sur le choix du modèle pour l'IPMVP**
+            **Note sur la conformité IPMVP**
             
-            Le protocole IPMVP ne prescrit pas un type spécifique de modèle de régression. Le choix doit être basé sur :
-            - La nature des relations entre variables (linéaires ou non)
-            - La qualité des métriques (R², CV, biais)
-            - La simplicité d'interprétation (importante pour communiquer les résultats)
+            Le protocole IPMVP (Option C) n'impose pas une méthode statistique spécifique, mais plutôt des critères de qualité:
             
-            Pour la conformité, IPMVP recommande généralement que le modèle choisi ait un R² ≥ 0.75 et un CV(RMSE) ≤ 15%, quelle que soit la méthode utilisée.
+            1. Le modèle doit avoir un R² ≥ 0.75 et un CV(RMSE) ≤ 15%
+            2. Le modèle doit être documentable et transparent
+            3. Les variables explicatives doivent avoir une relation plausible avec la consommation
+            4. L'erreur-type des coefficients doit être évaluée
+            
+            Les méthodes avancées (Ridge, Lasso, polynomiale) sont acceptables et peuvent même produire des modèles plus robustes dans certaines situations, tant qu'elles respectent ces critères.
             """)
 
         
@@ -985,10 +1003,20 @@ La méthodologie IPMVP évalue la qualité d'un modèle de régression selon ces
 # Information sur les types de régression
 st.sidebar.markdown(f"""
 ### 📊 Types de modèles
-- {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé dans l'IPMVP.")}
-- {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Idéal quand les variables sont corrélées entre elles.")}
-- {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Utile quand certaines variables pourraient être non pertinentes.")}
-- {tooltip("Régression polynomiale", "Permet de modéliser des relations non linéaires en introduisant des termes polynomiaux (carrés, cubes) des variables explicatives.")}
+- {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé et explicitement mentionné dans l'IPMVP.")}
+- {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Conforme à l'IPMVP tant que les critères de qualité statistique (R², CV) sont respectés et que le modèle reste documentable.")}
+- {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Conforme à l'IPMVP car elle simplifie le modèle tout en maintenant sa précision statistique.")}
+- {tooltip("Régression polynomiale", "Permet de modéliser des relations non linéaires. L'IPMVP accepte les modèles non linéaires si les relations physiques sont plausibles et si les critères statistiques sont respectés.")}
+""", unsafe_allow_html=True)
+
+# Information sur la conformité IPMVP des modèles avancés
+st.sidebar.markdown(f"""
+### ✅ Conformité IPMVP
+{tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R² et CV(RMSE)). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
+
+Les modèles sont évalués selon les critères IPMVP :
+- R² ≥ 0.75 : Excellente corrélation
+- CV(RMSE) ≤ 15% : Excellente précision
 """, unsafe_allow_html=True)
 
 # Pied de page amélioré
