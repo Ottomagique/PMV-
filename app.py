@@ -97,37 +97,43 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
 # 📌 Sélection des colonnes
-date_col = st.sidebar.selectbox("📅 Colonne Date", df.columns if df is not None else [""])
-conso_col = st.sidebar.selectbox("⚡ Colonne Consommation", df.columns if df is not None else [""])
+date_col = st.sidebar.selectbox("📅 Nom de la colonne Date", df.columns if df is not None else [""])
+conso_col = st.sidebar.selectbox("⚡ Nom de la colonne Consommation", df.columns if df is not None else [""])
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
 selected_vars = st.sidebar.multiselect("📊 Variables Explicatives", var_options)
 
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
-# 📌 **Graphique : Consommation réelle vs Ajustée**
+# 📌 **Graphique amélioré : Consommation réelle vs Ajustée**
 def plot_consumption(y_actual, y_pred, dates):
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(dates, y_actual, color="#6DBABC", label="Consommation réelle", alpha=0.7)
-    ax.plot(dates, y_pred, color="#E74C3C", marker='o', linestyle='-', linewidth=2, label="Consommation ajustée")
-    ax.set_xlabel("Mois")
-    ax.set_ylabel("Consommation")
-    ax.set_title("📊 Comparaison Consommation Mesurée vs Ajustée")
-    ax.legend()
-    ax.grid(True, linestyle="--", alpha=0.6)
+    
+    fig.patch.set_facecolor("#E7DDD9")  # Fond beige du thème
+    ax.set_facecolor("#F8F6F2")  # Fond clair pour lisibilité
+
+    ax.bar(dates, y_actual, color="#00485F", label="🔵 Consommation réelle", alpha=0.8, width=0.6)
+    ax.plot(dates, y_pred, color="#E74C3C", marker='o', linestyle='-', linewidth=2.5, markersize=7, 
+            label="🔴 Consommation ajustée")
+    
+    ax.set_xlabel("📆 Mois", fontsize=12, fontweight="bold", color="#0C1D2D")
+    ax.set_ylabel("⚡ Consommation", fontsize=12, fontweight="bold", color="#0C1D2D")
+    ax.set_title("📊 Comparaison Consommation Mesurée vs Ajustée", fontsize=14, fontweight="bold", color="#00485F")
+
+    ax.grid(True, linestyle="--", alpha=0.5, color="#B0BEC5")
+
+    ax.set_xticks(dates)
+    ax.set_xticklabels([d.strftime("%b %Y") for d in dates], rotation=45, ha="right")
+
+    ax.legend(loc="upper right", fontsize=12, frameon=True, fancybox=True, shadow=True, facecolor="#F8F6F2")
+
     return fig
 
 # 📌 **Lancer le calcul après sélection des variables**
 if df is not None and st.session_state.lancer_calcul:
     with st.spinner("⏳ Analyse en cours..."):
         df[date_col] = pd.to_datetime(df[date_col])
-        
-        # ✅ Vérifier et convertir correctement la consommation en float
-        try:
-            df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')  # Convertir en float, gérer erreurs
-            df = df.dropna(subset=[conso_col])  # Supprimer les lignes avec valeurs non valides
-        except Exception as e:
-            st.error(f"❌ Erreur : Impossible de convertir la colonne {conso_col} en numérique. Vérifiez vos données.")
-            st.stop()
+        df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')
+        df = df.dropna(subset=[conso_col])  
 
         X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
         y = df[conso_col]
@@ -169,21 +175,9 @@ if df is not None and st.session_state.lancer_calcul:
                             best_dates = df_subset[date_col]
 
     st.success("✅ Résultats de l'analyse")
-
-    conformity = best_r2 > 0.75 and abs(best_cv) < 0.2 and abs(best_bias) < 0.01
-    st.markdown(f"**📌 Meilleur Modèle Trouvé :** {'✅ Conforme IPMVP' if conformity else '❌ Non Conforme'}")
-    st.write(f"**📊 R² du modèle :** {best_r2:.4f}")
-    st.write(f"**📉 CV(RMSE) :** {best_cv:.4f}")
-    st.write(f"**📈 Biais Normalisé (NMBE) :** {best_bias:.6f}")
-    st.write(f"**🧩 Variables utilisées :** {', '.join(best_features)}")
-
-    # 📌 **Ajout de l'équation du modèle**
-    coefficients = [f"{coef:.4f} × {feat}" for coef, feat in zip(best_model.coef_, best_features)]
-    equation = f"Consommation = {best_model.intercept_:.4f} + " + " + ".join(coefficients)
-    st.markdown(f"**📑 Équation d'ajustement :** `{equation}`")
-
-    fig = plot_consumption(y_subset, best_y_pred, best_dates)
-    st.pyplot(fig)
+    st.markdown(f"**📌 Meilleur Modèle Trouvé :** {'✅ Conforme IPMVP' if best_r2 > 0.75 else '❌ Non Conforme'}")
+    st.write(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
+    st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 Développé avec ❤️ par **Efficacité Energétique, Carbone & RSE Team** | © 2025")
+st.sidebar.info("💡 Développé avec <span style='color:green;'>❤️</span> par **Efficacité Energétique, Carbone & RSE Team** | © 2025", unsafe_allow_html=True)
