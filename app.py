@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import io
 import matplotlib.pyplot as plt
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
@@ -14,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS **(Retour aux couleurs et design d'origine)**
+# 🔹 Appliquer le CSS (Respect du design actuel)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -151,13 +150,20 @@ if df is not None and st.session_state.lancer_calcul:
                             best_y_pred = y_pred
                             best_dates = df_subset[date_col]
 
-    # **✅ Affichage des Résultats**
+    # ✅ **Affichage des Résultats**
     st.success("✅ Résultats de l'analyse")
-    st.markdown(f"**📌 Meilleur Modèle :** `Régression Linéaire`")
-    st.markdown(f"**📊 R² du modèle :** `{best_r2:.4f}`")
-    st.markdown(f"**📉 CV (RMSE) :** `{best_cv:.4f}`")
-    st.markdown(f"**📈 Biais Normalisé (NMBE) :** `{best_bias:.6f}`")
-    st.markdown(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
-    st.markdown(f"**✅ Conforme IPMVP :** {'Oui' if best_r2 > 0.75 else 'Non'}")
+    st.write(f"**📌 Modèle choisi :** Régression Linéaire")
+    st.write(f"**✅ Conforme IPMVP :** {'Oui' if best_r2 > 0.75 else 'Non'}")
+    
+    # 📋 **Tableau des résultats**
+    results_df = pd.DataFrame({
+        "Critère": ["R²", "CV (RMSE)", "Biais Normalisé (NMBE)", "Intercept (a)"] + best_features,
+        "Valeur": [round(best_r2, 4), round(best_cv, 4), round(best_bias, 6), round(best_model.intercept_, 4)] + [round(c, 4) for c in best_model.coef_]
+    })
+    st.table(results_df)
+
+    # **📑 Équation d'ajustement**
+    equation = f"y = {best_model.intercept_:.4f} + " + " + ".join([f"{coef:.4f} × {feat}" for coef, feat in zip(best_model.coef_, best_features)])
+    st.markdown(f"**📑 Équation d'ajustement :** `{equation}`")
 
 st.sidebar.write("💡 **Développé par Efficacité Energétique, Carbone & RSE Team | © 2025**")
