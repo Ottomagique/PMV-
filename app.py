@@ -131,7 +131,7 @@ def plot_consumption(y_actual, y_pred, dates):
 # 📌 **Lancer le calcul après sélection des variables**
 if df is not None and st.session_state.lancer_calcul:
     with st.spinner("⏳ Analyse en cours..."):
-        df[date_col] = pd.to_datetime(df[date_col])
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
         df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')
         df = df.dropna(subset=[conso_col])  
 
@@ -175,11 +175,5 @@ if df is not None and st.session_state.lancer_calcul:
                             best_dates = df_subset[date_col]
 
     st.success("✅ Résultats de l'analyse")
-    st.markdown(f"**📌 Meilleur Modèle Trouvé :** {'✅ Conforme IPMVP' if best_r2 > 0.75 else '❌ Non Conforme'}")
-    st.write(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
+    st.write(f"**📑 Équation d’ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
     st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
-
-st.sidebar.markdown("""
-💡 Développé avec <span style='color:green; font-weight:bold;'>❤️</span> 
-par **Efficacité Energétique, Carbone & RSE Team** | © 2025
-""", unsafe_allow_html=True)
