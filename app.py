@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS pour conserver le design propre
+# 🔹 Appliquer le CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -120,6 +120,15 @@ def plot_consumption(y_actual, y_pred, dates):
 if df is not None and st.session_state.lancer_calcul:
     with st.spinner("⏳ Analyse en cours..."):
         df[date_col] = pd.to_datetime(df[date_col])
+        
+        # ✅ Vérifier et convertir correctement la consommation en float
+        try:
+            df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')  # Convertir en float, gérer erreurs
+            df = df.dropna(subset=[conso_col])  # Supprimer les lignes avec valeurs non valides
+        except Exception as e:
+            st.error(f"❌ Erreur : Impossible de convertir la colonne {conso_col} en numérique. Vérifiez vos données.")
+            st.stop()
+
         X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
         y = df[conso_col]
 
@@ -136,7 +145,7 @@ if df is not None and st.session_state.lancer_calcul:
                 periode_actuelle = periodes[i:i+12]
                 df_subset = df[df[date_col].dt.to_period('M').isin(periode_actuelle)]
                 X_subset = df_subset[selected_vars]
-                y_subset = df_subset[conso_col].astype(float)
+                y_subset = df_subset[conso_col]
 
                 for n in range(1, max_features + 1):
                     for combo in combinations(selected_vars, n):
@@ -167,10 +176,6 @@ if df is not None and st.session_state.lancer_calcul:
     st.write(f"**📉 CV(RMSE) :** {best_cv:.4f}")
     st.write(f"**📈 Biais Normalisé (NMBE) :** {best_bias:.6f}")
     st.write(f"**🧩 Variables utilisées :** {', '.join(best_features)}")
-    
-    coefficients = [f"{coef:.4f} × {feat}" for coef, feat in zip(best_model.coef_, best_features)]
-    formula = " + ".join(coefficients)
-    st.write(f"**📝 Formule d'ajustement :** Consommation = {best_model.intercept_:.4f} + {formula}")
 
     fig = plot_consumption(y_subset, best_y_pred, best_dates)
     st.pyplot(fig)
