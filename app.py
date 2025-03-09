@@ -318,6 +318,33 @@ with col1:
 with col2:
     lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
 
+# Traitement du fichier importé
+if uploaded_file:
+    try:
+        df = pd.read_excel(uploaded_file)  # Chargement du fichier
+        
+        # Détecter automatiquement les colonnes de date et de consommation
+        date_col_guess, conso_col_guess = detecter_colonnes(df)
+        
+        # Informer l'utilisateur des colonnes détectées automatiquement
+        if date_col_guess and conso_col_guess:
+            st.success(f"✅ Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
+        elif date_col_guess:
+            st.info(f"ℹ️ Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
+        elif conso_col_guess:
+            st.info(f"ℹ️ Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
+        else:
+            st.warning("⚠️ Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
+    except Exception as e:
+        st.error(f"❌ Erreur lors du chargement du fichier Excel : {str(e)}")
+        df = None
+        date_col_guess = None
+        conso_col_guess = None
+else:
+    df = None
+    date_col_guess = None
+    conso_col_guess = None
+
 # 📂 **Sélection des données (toujours visible même sans fichier importé)**
 st.sidebar.header("🔍 Sélection des données")
 
