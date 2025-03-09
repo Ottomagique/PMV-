@@ -155,7 +155,12 @@ st.markdown("""
             <li>Les variables explicatives potentielles (Ensoleillement, DJU, etc.)</li>
         </ul>
     </li>
-    <li><strong>Recherche automatique</strong> : L'application analyse automatiquement toutes les périodes glissantes de 12 mois dans vos données et sélectionne celle qui produit le meilleur modèle</li>
+    <li><strong>Choix de la période d'analyse</strong> : Deux options sont disponibles :
+        <ul>
+            <li>Recherche automatique : l'application trouve la meilleure période de 12 mois dans vos données</li>
+            <li>Sélection manuelle : choisissez vous-même la période d'analyse en sélectionnant les dates de début et de fin</li>
+        </ul>
+    </li>
     <li><strong>Configuration de l'analyse</strong> : Choisissez le nombre maximum de variables à combiner (1 à 4)</li>
     <li><strong>Lancement</strong> : Cliquez sur "Lancer le calcul" pour obtenir le meilleur modèle d'ajustement</li>
     <li><strong>Analyse des résultats</strong> : Examinez les métriques (R², CV, biais), l'équation d'ajustement et les visualisations générées</li>
@@ -184,14 +189,59 @@ if uploaded_file:
 date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
 conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
 
-# Option pour rechercher automatiquement la meilleure période de 12 mois
-auto_best_period = st.sidebar.checkbox("🔍 Rechercher automatiquement la meilleure période de 12 mois", value=True)
+# **Option pour rechercher automatiquement la meilleure période de 12 mois ou choisir une période**
+period_choice = st.sidebar.radio(
+    "📅 Sélection de la période d'analyse",
+    ["Rechercher automatiquement la meilleure période de 12 mois", "Sélectionner manuellement une période spécifique"]
+)
 
 # Variables pour stocker les informations de la meilleure période
 best_period_start = None
 best_period_end = None
 best_period_name = None
 best_period_r2 = -1
+
+# Option de sélection manuelle de période
+if period_choice == "Sélectionner manuellement une période spécifique" and df is not None and date_col in df.columns:
+    # Convertir la colonne de date si elle ne l'est pas déjà
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        try:
+            df[date_col] = pd.to_datetime(df[date_col])
+        except:
+            st.sidebar.warning("⚠️ La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
+    
+    if pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        # Obtenir les dates minimales et maximales
+        min_date = df[date_col].min().date()
+        max_date = df[date_col].max().date()
+        
+        # Sélection de la date de début et de fin
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            start_date = st.date_input("Date de début", 
+                                       value=min_date,
+                                       min_value=min_date, 
+                                       max_value=max_date)
+        with col2:
+            # Calcul de la date par défaut (12 mois après la date de début si possible)
+            default_end = min(max_date, (pd.to_datetime(start_date) + pd.DateOffset(months=11)).date())
+            end_date = st.date_input("Date de fin", 
+                                     value=default_end,
+                                     min_value=start_date, 
+                                     max_value=max_date)
+        
+        # Calculer la différence en mois
+        months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+        
+        # Afficher des informations sur la période sélectionnée
+        st.sidebar.info(f"Période sélectionnée: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')} ({months_diff} mois)")
+        
+        # Recommandation pour 12 mois
+        if months_diff != 12:
+            if months_diff < 12:
+                st.sidebar.warning(f"⚠️ La période sélectionnée est de {months_diff} mois. La méthodologie IPMVP recommande 12 mois.")
+            else:
+                st.sidebar.warning(f"⚠️ La période sélectionnée est de {months_diff} mois. Pour une analyse standard IPMVP, 12 mois sont recommandés.")
 
 # **Variables explicatives (seulement après importation du fichier)**
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
@@ -223,8 +273,9 @@ if df is not None and lancer_calcul:
             st.error("❌ La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
             st.stop()
     
-    # Vérifier s'il y a suffisamment de données (au moins 12 mois)
-    if auto_best_period:
+    # Option 1: Recherche automatique de la meilleure période
+    if period_choice == "Rechercher automatiquement la meilleure période de 12 mois":
+        # Vérifier s'il y a suffisamment de données (au moins 12 mois)
         date_ranges = []
         min_date = df[date_col].min()
         max_date = df[date_col].max()
@@ -339,14 +390,21 @@ if df is not None and lancer_calcul:
             
             # Afficher les détails sur les données
             st.markdown(f"**📊 Nombre de points de données :** {len(df_filtered)}")
-            
-            # Continuer avec l'affichage des résultats (voir ci-dessous)
         else:
             st.error("❌ Aucun modèle valide n'a été trouvé sur les périodes analysées.")
             st.stop()
+    
+    # Option 2: Période spécifique sélectionnée
     else:
-        # Si l'option automatique n'est pas activée, utiliser toutes les données
-        df_filtered = df
+        # Filtrer les données selon la période sélectionnée manuellement
+        df_filtered = df[(df[date_col].dt.date >= start_date) & (df[date_col].dt.date <= end_date)]
+        
+        # Afficher le nombre de points de données
+        st.info(f"Analyse sur la période du {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}")
+        st.markdown(f"**📊 Nombre de points de données :** {len(df_filtered)}")
+        
+        if len(df_filtered) < 10:
+            st.warning("⚠️ Le nombre de points de données est faible pour une analyse statistique fiable.")
         
         X = df_filtered[selected_vars] if selected_vars else pd.DataFrame(index=df_filtered.index)
         y = df_filtered[conso_col]
