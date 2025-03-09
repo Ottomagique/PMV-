@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS personnalisé (sans le bleu)
+# 🔹 Appliquer le CSS **(Respecte la charte graphique d'origine)**
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -176,11 +176,8 @@ if df is not None and st.session_state.lancer_calcul:
                             best_dates = df_subset[date_col]
 
     st.success("✅ Résultats de l'analyse")
-    st.markdown(f"**📌 Meilleur Modèle Trouvé :** {'✅ Conforme IPMVP' if best_r2 > 0.75 else '❌ Non Conforme'}")
+    st.write(f"**📌 Meilleur Modèle :** `{'Régression Linéaire'}`")
     st.write(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
     st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
 
-st.sidebar.markdown("""
-💡 Développé avec <span style='color:green; font-weight:bold;'>❤️</span> 
-par **Efficacité Energétique, Carbone & RSE Team** | © 2025
-""", unsafe_allow_html=True)
+st.sidebar.write("💡 **Développé par Efficacité Energétique, Carbone & RSE Team | © 2025**")
