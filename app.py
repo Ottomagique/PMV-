@@ -12,7 +12,7 @@ import math
 
 # 📌 Configuration de la page
 st.set_page_config(
-    page_title=" Analyse IPMVP Simplifiée",
+    page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
     layout="wide"
 )
@@ -197,7 +197,7 @@ st.markdown("""
 # 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
 st.markdown("""
-Bienvenue sur ** L' Analyse & calcul IPMVP ** 🔍 !  
+Bienvenue sur **l'Analyse IPMVP Professionnelle** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
 """)
 
@@ -983,20 +983,28 @@ if df is not None and lancer_calcul:
         
         # 🔹 Tableau des résultats pour tous les modèles testés
         st.subheader("📋 Classement des modèles testés")
-        models_summary = []
         
-        for i, model in enumerate(all_models[:10]):  # Afficher les 10 meilleurs modèles
-            models_summary.append({
-                "Rang": i+1,
-                "Type": model['model_name'],
-                "Variables": ", ".join(model['features']),
-                "R²": f"{model['r2']:.4f}",
-                "CV(RMSE)": f"{model['cv_rmse']:.4f}",
-                "Biais (%)": f"{model['bias']:.2f}",
-                "Conformité": model['conformite']
-            })
-        
-        st.table(pd.DataFrame(models_summary))
+        # Vérifier que all_models existe et n'est pas vide
+        if 'all_models' in locals() and all_models:
+            # Trier par R² décroissant
+            all_models.sort(key=lambda x: x['r2'], reverse=True)
+            
+            models_summary = []
+            
+            for i, model in enumerate(all_models[:10]):  # Afficher les 10 meilleurs modèles
+                models_summary.append({
+                    "Rang": i+1,
+                    "Type": model['model_name'],
+                    "Variables": ", ".join(model['features']),
+                    "R²": f"{model['r2']:.4f}",
+                    "CV(RMSE)": f"{model['cv_rmse']:.4f}",
+                    "Biais (%)": f"{model['bias']:.2f}",
+                    "Conformité": model['conformite']
+                })
+            
+            st.table(pd.DataFrame(models_summary))
+        else:
+            st.info("Aucun modèle alternatif disponible pour comparaison.")
         
     else:
         st.error("⚠️ Aucun modèle valide n'a été trouvé.")
