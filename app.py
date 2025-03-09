@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
+import matplotlib.pyplot as plt  # ✅ Ajout de l'import pour éviter l'erreur
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
@@ -101,92 +102,74 @@ with col2:
 # 📂 **Sélection des données (toujours visible même sans fichier importé)**
 st.sidebar.header("🔍 Sélection des données")
 
-date_col = st.sidebar.selectbox("📅 Nom de la donnée date", [""] + (list(df.columns) if 'df' in locals() else []))
-conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", [""] + (list(df.columns) if 'df' in locals() else []))
+df = None  # Initialisation pour éviter des erreurs
 
-var_options = [col for col in df.columns if col not in [date_col, conso_col]] if 'df' in locals() else []
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)  # Chargement du fichier
+
+# **Définition des colonnes pour la sélection AVANT import**
+date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
+conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
+
+# **Variables explicatives (seulement après importation du fichier)**
+var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
 selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
 
 # Nombre de variables à tester
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
-# 📌 Lecture du fichier
-@st.cache_data
-def load_data(file):
-    """Charge les données depuis un fichier Excel"""
-    try:
-        return pd.read_excel(file)
-    except Exception as e:
-        st.error(f"Erreur lors du chargement du fichier: {e}")
-        return None
+# 📌 **Lancement du calcul seulement si le bouton est cliqué**
+if df is not None and lancer_calcul:
+    st.subheader("⚙️ Analyse en cours...")
 
-df = None
-if uploaded_file:
-    df = load_data(uploaded_file)
+    X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
+    y = df[conso_col]
 
-# 📌 **Affichage des données après import**
-if df is not None:
-    st.subheader("📊 Données chargées")
-    st.dataframe(df.reset_index(drop=True))
+    # Nettoyage des données avant entraînement
+    if X.isnull().values.any() or np.isinf(X.values).any():
+        st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
+        st.stop()
 
-    # 📌 Mise à jour des options des colonnes après import
-    date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns, index=0)
-    conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns, index=1)
-    var_options = [col for col in df.columns if col not in [date_col, conso_col]]
-    selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
+    if y.isnull().values.any() or np.isinf(y.values).any():
+        st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
+        st.stop()
 
-    # 📌 **Lancement du calcul seulement si le bouton est cliqué**
-    if lancer_calcul:
-        st.subheader("⚙️ Analyse en cours...")
+    X = X.apply(pd.to_numeric, errors='coerce').dropna()
+    y = pd.to_numeric(y, errors='coerce').dropna()
 
-        X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
-        y = df[conso_col]
+    best_model = None
+    best_r2 = -1
+    best_features = []
 
-        # Nettoyage des données avant entraînement
-        if X.isnull().values.any() or np.isinf(X.values).any():
-            st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
-            st.stop()
+    # 🔹 Test des combinaisons de variables (de 1 à max_features)
+    for n in range(1, max_features + 1):
+        for combo in combinations(selected_vars, n):
+            X_subset = X[list(combo)]
+            model = LinearRegression()
+            model.fit(X_subset, y)
+            y_pred = model.predict(X_subset)
+            r2 = r2_score(y, y_pred)
 
-        if y.isnull().values.any() or np.isinf(y.values).any():
-            st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
-            st.stop()
+            if r2 > best_r2:
+                best_r2 = r2
+                best_model = model
+                best_features = list(combo)
 
-        X = X.apply(pd.to_numeric, errors='coerce').dropna()
-        y = pd.to_numeric(y, errors='coerce').dropna()
+    # 🔹 Résultats du modèle sélectionné
+    if best_model:
+        st.success("✅ Modèle trouvé avec succès !")
+        st.write(f"**Meilleures variables utilisées :** {', '.join(best_features)}")
+        st.write(f"**R² du modèle :** {best_r2:.4f}")
 
-        best_model = None
-        best_r2 = -1
-        best_features = []
-        
-        # 🔹 Test des combinaisons de variables (de 1 à max_features)
-        for n in range(1, max_features + 1):
-            for combo in combinations(selected_vars, n):
-                X_subset = X[list(combo)]
-                model = LinearRegression()
-                model.fit(X_subset, y)
-                y_pred = model.predict(X_subset)
-                r2 = r2_score(y, y_pred)
-
-                if r2 > best_r2:
-                    best_r2 = r2
-                    best_model = model
-                    best_features = list(combo)
-
-        # 🔹 Résultats du modèle sélectionné
-        if best_model:
-            st.success("✅ Modèle trouvé avec succès !")
-            st.write(f"**Meilleures variables utilisées :** {', '.join(best_features)}")
-            st.write(f"**R² du modèle :** {best_r2:.4f}")
-
-            # 🔹 Graphique de consommation
-            fig, ax = plt.subplots(figsize=(10, 5))
-            ax.bar(range(len(y)), y, color="#6DBABC", label="Consommation mesurée")
-            ax.plot(range(len(y)), best_model.predict(df[best_features]), color="#E74C3C", marker='o', label="Consommation ajustée")
-            ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
-            ax.legend()
-            st.pyplot(fig)
-        else:
-            st.error("⚠️ Aucun modèle valide n'a été trouvé.")
+        # 🔹 Graphique de consommation
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(range(len(y)), y, color="#6DBABC", label="Consommation mesurée")
+        ax.plot(range(len(y)), best_model.predict(df[best_features]), color="#E74C3C", marker='o', label="Consommation ajustée")
+        ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
+        ax.legend()
+        st.pyplot(fig)
+    else:
+        st.error("⚠️ Aucun modèle valide n'a été trouvé.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("Développé avec ❤️ et Streamlit 🚀")
