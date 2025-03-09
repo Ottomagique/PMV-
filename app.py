@@ -1,5 +1,13 @@
 import streamlit as st
-# Appliquer le CSS personnalisé
+
+# Configuration de la page - DOIT ÊTRE LA PREMIÈRE COMMANDE STREAMLIT
+st.set_page_config(
+    page_title="Analyse IPMVP Simplifiée",
+    page_icon="📊",
+    layout="wide"
+)
+
+# Appliquer le CSS personnalisé APRÈS st.set_page_config
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -49,13 +57,6 @@ import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
-
-# Configuration de la page
-st.set_page_config(
-    page_title="Analyse IPMVP Simplifiée",
-    page_icon="📊",
-    layout="wide"
-)
 
 # Titre de l'application
 st.title("📊 Analyse IPMVP")
@@ -509,47 +510,32 @@ if df is not None:
             status_text.text("Analyse terminée avec succès!")
             progress_bar.progress(1.0)
             
-            # Choix du format de rapport
-            format_rapport = st.radio("Format du rapport", ["Format visuel", "Format texte"], horizontal=True)
-            
-            # Afficher le rapport selon le format choisi
+            # Afficher le rapport
             st.subheader("Résultats de l'analyse IPMVP")
             
-            if format_rapport == "Format visuel":
-                # Utilisation des composants natifs Streamlit sans HTML complexe
-                st.subheader(f"✅ Modèle IPMVP conforme")
-                st.write(f"**Type de modèle:** {modele_ipmvp.best_model_type}")
-                
-                st.write("**Variables sélectionnées:**")
-                for var in modele_ipmvp.best_features:
-                    st.write(f"- {var}")
-                
-                st.write("**Formule d'ajustement:**")
-                st.code(modele_ipmvp.best_formula)
-                
-                st.write("**Métriques de performance:**")
-                
-                metrics_df = pd.DataFrame({
-                    "Métrique": ["R² (coefficient de détermination)", "CV(RMSE) (coefficient de variation)", "NMBE (biais normalisé)"],
-                    "Valeur": [f"{modele_ipmvp.best_r2:.4f}", f"{modele_ipmvp.best_cv:.4f}", f"{modele_ipmvp.best_bias:.8f}"],
-                    "Seuil IPMVP": ["> 0.75", "< 0.2", "< 0.01"],
-                    "Statut": ["✅" if modele_ipmvp.best_r2 > 0.75 else "❌", 
-                              "✅" if modele_ipmvp.best_cv < 0.2 else "❌", 
-                              "✅" if abs(modele_ipmvp.best_bias) < 0.01 else "❌"]
-                })
-                
-                st.table(metrics_df)
-            else:
-                rapport_texte = modele_ipmvp.generer_rapport()
-                st.text(rapport_texte)
-                
-                # Bouton pour copier le rapport textuel
-                st.download_button(
-                    label="📋 Copier le rapport texte",
-                    data=rapport_texte,
-                    file_name="rapport_ipmvp.txt",
-                    mime="text/plain"
-                )
+            # Utiliser uniquement les composants natifs Streamlit
+            st.subheader(f"✅ Modèle IPMVP conforme")
+            st.write(f"**Type de modèle:** {modele_ipmvp.best_model_type}")
+            
+            st.write("**Variables sélectionnées:**")
+            for var in modele_ipmvp.best_features:
+                st.write(f"- {var}")
+            
+            st.write("**Formule d'ajustement:**")
+            st.code(modele_ipmvp.best_formula)
+            
+            st.write("**Métriques de performance:**")
+            
+            metrics_df = pd.DataFrame({
+                "Métrique": ["R² (coefficient de détermination)", "CV(RMSE) (coefficient de variation)", "NMBE (biais normalisé)"],
+                "Valeur": [f"{modele_ipmvp.best_r2:.4f}", f"{modele_ipmvp.best_cv:.4f}", f"{modele_ipmvp.best_bias:.8f}"],
+                "Seuil IPMVP": ["> 0.75", "< 0.2", "< 0.01"],
+                "Statut": ["✅" if modele_ipmvp.best_r2 > 0.75 else "❌", 
+                          "✅" if modele_ipmvp.best_cv < 0.2 else "❌", 
+                          "✅" if abs(modele_ipmvp.best_bias) < 0.01 else "❌"]
+            })
+            
+            st.table(metrics_df)
             
             # Ajout d'un résumé avec des métriques visuelles
             st.subheader("Résumé des performances")
