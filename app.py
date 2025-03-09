@@ -76,24 +76,26 @@ st.markdown("""
     }
 
     .metrics-card {
-        background-color: #fff;
+        background-color: #E7DDD9;
         border-radius: 10px;
         padding: 15px;
         margin: 10px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        border: 1px solid #00485F;
     }
     
     .equation-box {
-        background-color: #f8f9fa;
+        background-color: #E7DDD9;
         border-left: 4px solid #6DBABC;
         padding: 15px;
         margin: 15px 0;
         border-radius: 0 10px 10px 0;
         font-family: monospace;
+        border: 1px solid #00485F;
     }
     
     .conformity-good {
-        color: #27ae60;
+        color: #96B91D;
         font-weight: bold;
     }
     
@@ -106,6 +108,29 @@ st.markdown("""
         color: #e74c3c;
         font-weight: bold;
     }
+    
+    .footer-credit {
+        text-align: center;
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #00485F;
+        color: white;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+    
+    .instruction-card {
+        background-color: #E7DDD9;
+        border-left: 4px solid #96B91D;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 0 10px 10px 0;
+    }
+    
+    .table-header {
+        background-color: #00485F;
+        color: white;
+    }
 
     </style>
     """, unsafe_allow_html=True)
@@ -113,14 +138,28 @@ st.markdown("""
 # 📌 **Description de l'application**
 st.title("📊 Analyse IPMVP")
 st.markdown("""
-Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
-Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives.
+Bienvenue sur **l'Analyse IPMVP Professionnelle** 🔍 !  
+Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
+""")
 
-### **🛠️ Instructions :**
-1. **Importer un fichier Excel 📂** contenant les données de consommation.
-2. **Sélectionner la colonne de date, la consommation et les variables explicatives 📊**.
-3. **Choisir le nombre de variables à tester 🔢** (de 1 à 4).
-4. **Lancer le calcul 🚀** et obtenir le **meilleur modèle** avec une analyse graphique.
+st.markdown("""
+<div class="instruction-card">
+<h3>🛠️ Guide d'utilisation</h3>
+<ol>
+    <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
+    <li><strong>Import du fichier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
+    <li><strong>Sélection des données</strong> : Dans le panneau latéral, sélectionnez :
+        <ul>
+            <li>La colonne de date</li>
+            <li>La colonne de consommation énergétique</li>
+            <li>Les variables explicatives potentielles (température, production, etc.)</li>
+        </ul>
+    </li>
+    <li><strong>Configuration de l'analyse</strong> : Choisissez le nombre maximum de variables à combiner (1 à 4)</li>
+    <li><strong>Lancement</strong> : Cliquez sur "Lancer le calcul" pour obtenir le meilleur modèle d'ajustement</li>
+    <li><strong>Analyse des résultats</strong> : Examinez les métriques (R², CV, biais), l'équation d'ajustement et les visualisations générées</li>
+</ol>
+</div>
 """)
 
 # 📂 **Import du fichier et lancement du calcul**
@@ -284,43 +323,97 @@ if df is not None and lancer_calcul:
         X_best = df[best_features]
         y_pred = best_model.predict(X_best)
         
+        # Configuration du style des graphiques pour correspondre au thème
+        plt.style.use('seaborn-v0_8-whitegrid')
+        plt.rcParams['axes.facecolor'] = '#F5F5F5'
+        plt.rcParams['figure.facecolor'] = '#E7DDD9'
+        plt.rcParams['axes.edgecolor'] = '#00485F'
+        plt.rcParams['axes.labelcolor'] = '#00485F'
+        plt.rcParams['axes.titlecolor'] = '#00485F'
+        plt.rcParams['xtick.color'] = '#0C1D2D'
+        plt.rcParams['ytick.color'] = '#0C1D2D'
+        plt.rcParams['grid.color'] = '#00485F'
+        plt.rcParams['grid.alpha'] = 0.1
+        
         # Graphique de comparaison
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.7, label="Consommation mesurée")
-        ax.plot(range(len(y)), y_pred, color="#E74C3C", marker='o', linewidth=2, markersize=4, label="Consommation ajustée")
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
-        ax.set_xlabel("Observations")
-        ax.set_ylabel("Consommation")
-        ax.legend()
+        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
+        ax.plot(range(len(y)), y_pred, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Consommation ajustée", zorder=10)
+        ax.set_title("Comparaison Consommation Mesurée vs Ajustée", fontweight='bold', fontsize=14)
+        ax.set_xlabel("Observations", fontweight='bold')
+        ax.set_ylabel("Consommation", fontweight='bold')
+        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
+        ax.grid(True, linestyle='--', alpha=0.2)
+        # Annotation du R²
+        ax.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
+                    fontsize=12, fontweight='bold', color='#00485F',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
         st.pyplot(fig)
         
-        # Graphique de dispersion (measured vs predicted)
-        fig2, ax2 = plt.subplots(figsize=(8, 8))
-        ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.7)
+        # Création d'une mise en page en colonnes pour les deux derniers graphiques
+        col1, col2 = st.columns(2)
         
-        # Ligne de référence y=x
-        min_val = min(min(y), min(y_pred))
-        max_val = max(max(y), max(y_pred))
-        ax2.plot([min_val, max_val], [min_val, max_val], 'k--', label="Référence y=x")
+        with col1:
+            # Graphique de dispersion (measured vs predicted)
+            fig2, ax2 = plt.subplots(figsize=(8, 7))
+            scatter = ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.8, s=50, edgecolor='#00485F')
+            
+            # Ligne de référence y=x
+            min_val = min(min(y), min(y_pred))
+            max_val = max(max(y), max(y_pred))
+            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=1.5, label="Référence y=x")
+            
+            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
+            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
+            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
+            ax2.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
+            ax2.grid(True, linestyle='--', alpha=0.2)
+            # Annotation du CV(RMSE)
+            ax2.annotate(f"CV(RMSE) = {best_metrics['cv_rmse']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
+                        fontsize=12, fontweight='bold', color='#00485F',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
+            st.pyplot(fig2)
         
-        ax2.set_title("Consommation Mesurée vs Prédite")
-        ax2.set_xlabel("Consommation Mesurée")
-        ax2.set_ylabel("Consommation Prédite")
-        ax2.legend()
-        ax2.grid(True, linestyle='--', alpha=0.6)
-        st.pyplot(fig2)
-        
-        # Affichage des résidus
-        residus = y - y_pred
-        
-        fig3, ax3 = plt.subplots(figsize=(12, 5))
-        ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.7)
-        ax3.axhline(y=0, color='r', linestyle='-', alpha=0.3)
-        ax3.set_title("Analyse des Résidus")
-        ax3.set_xlabel("Observations")
-        ax3.set_ylabel("Résidus")
-        ax3.grid(True, linestyle='--', alpha=0.6)
-        st.pyplot(fig3)
+        with col2:
+            # Affichage des résidus
+            residus = y - y_pred
+            
+            fig3, ax3 = plt.subplots(figsize=(8, 7))
+            ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=50, edgecolor='#00485F')
+            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.5, linewidth=1.5)
+            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
+            ax3.set_xlabel("Observations", fontweight='bold')
+            ax3.set_ylabel("Résidus", fontweight='bold')
+            ax3.grid(True, linestyle='--', alpha=0.2)
+            
+            # Annotation du biais
+            ax3.annotate(f"Biais = {best_metrics['bias']:.2f}%", xy=(0.02, 0.95), xycoords='axes fraction',
+                        fontsize=12, fontweight='bold', color='#00485F',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
+            st.pyplot(fig3)
+            
+        # Ajout d'un expander pour expliquer l'interprétation des graphiques
+        with st.expander("📚 Comment interpréter ces graphiques ?"):
+            st.markdown("""
+            ### Interprétation des visualisations
+            
+            **1. Graphique Consommation Mesurée vs Ajustée**
+            - Compare les valeurs réelles (barres bleues) avec les prédictions du modèle (ligne verte)
+            - Un modèle idéal montre une ligne qui suit étroitement les sommets des barres
+            
+            **2. Graphique de dispersion**
+            - Les points doivent s'aligner le long de la ligne diagonale
+            - Des points éloignés de la ligne indiquent des prédictions moins précises
+            - Plus les points sont proches de la diagonale, meilleur est le modèle
+            
+            **3. Analyse des Résidus**
+            - Montre l'erreur pour chaque observation (valeur réelle - valeur prédite)
+            - Idéalement, les résidus devraient:
+              - Être répartis de façon aléatoire autour de zéro
+              - Ne pas présenter de tendance ou de motif visible
+              - Avoir une distribution équilibrée au-dessus et en-dessous de zéro
+            """)
+
         
         # 🔹 Tableau des résultats pour tous les modèles testés
         st.subheader("📋 Classement des modèles testés")
@@ -342,4 +435,22 @@ if df is not None and lancer_calcul:
         st.error("⚠️ Aucun modèle valide n'a été trouvé.")
 
 st.sidebar.markdown("---")
-st.sidebar.info("Développé avec ❤️ et Streamlit 🚀")
+
+# Ajout d'informations sur la méthodologie IPMVP
+st.sidebar.subheader("📘 Méthodologie IPMVP")
+st.sidebar.markdown("""
+La méthodologie IPMVP (International Performance Measurement and Verification Protocol) évalue la qualité d'un modèle de régression selon ces critères :
+
+- **R² ≥ 0.75** : Excellente corrélation
+- **CV(RMSE) ≤ 15%** : Excellente précision
+- **Biais < 5%** : Ajustement équilibré
+""")
+
+# Pied de page amélioré
+st.markdown("---")
+st.markdown("""
+<div class="footer-credit">
+    <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
+    <p>Outil professionnel d'analyse et de modélisation énergétique conforme IPMVP</p>
+</div>
+""", unsafe_allow_html=True)
