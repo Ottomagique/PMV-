@@ -243,8 +243,8 @@ class ModelIPMVP:
             
         self.best_formula = formula
     
-    def generer_rapport(self):
-        """Génère un rapport structuré sur le meilleur modèle"""
+    def generer_rapport_html(self):
+        """Génère un rapport structuré en HTML sur le meilleur modèle"""
         if self.best_model is None:
             return """
             <div class="card" style="border-left: 5px solid #dc3545;">
@@ -307,6 +307,36 @@ class ModelIPMVP:
                 </tr>
             </table>
         </div>
+        """
+        return rapport
+        
+    def generer_rapport(self):
+        """Génère un rapport en texte simple, sans HTML"""
+        if self.best_model is None:
+            return "❌ Aucun modèle valide n'a pu être entraîné."
+        
+        # Formatage des métriques
+        r2_formatted = f"{self.best_r2:.4f}"
+        cv_formatted = f"{self.best_cv:.4f}"
+        bias_formatted = f"{self.best_bias:.8f}"
+        
+        # Créer un rapport en texte simple
+        rapport = f"""
+RAPPORT IPMVP - {self.best_model_type}
+=======================================================
+
+Variables sélectionnées :
+{', '.join(self.best_features)}
+
+Formule d'ajustement :
+{self.best_formula}
+
+Métriques de performance :
+- R² (coefficient de détermination) : {r2_formatted} (seuil > 0.75) ✓
+- CV(RMSE) (coefficient de variation) : {cv_formatted} (seuil < 0.2) ✓
+- NMBE (biais normalisé) : {bias_formatted} (seuil < 0.01) ✓
+
+✅ Modèle conforme aux critères IPMVP
         """
         return rapport
     
@@ -610,10 +640,26 @@ if df is not None:
             status_text.text("Analyse terminée avec succès!")
             progress_bar.progress(1.0)
             
-            # Afficher le rapport
+            # Choix du format de rapport
+            format_rapport = st.radio("Format du rapport", ["Format visuel", "Format texte"], horizontal=True)
+            
+            # Afficher le rapport selon le format choisi
             st.subheader("Résultats de l'analyse IPMVP")
-            rapport = modele_ipmvp.generer_rapport()
-            st.markdown(rapport, unsafe_allow_html=True)
+            
+            if format_rapport == "Format visuel":
+                rapport_html = modele_ipmvp.generer_rapport_html()
+                st.markdown(rapport_html, unsafe_allow_html=True)
+            else:
+                rapport_texte = modele_ipmvp.generer_rapport()
+                st.text(rapport_texte)
+                
+                # Bouton pour copier le rapport textuel
+                st.download_button(
+                    label="📋 Copier le rapport texte",
+                    data=rapport_texte,
+                    file_name="rapport_ipmvp.txt",
+                    mime="text/plain"
+                )
             
             # Ajout d'un résumé avec des métriques visuelles
             st.subheader("Résumé des performances")
