@@ -77,17 +77,20 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 📌 **Description de l'application**
+# 📌 **Description de l'application améliorée**
 st.title("📊 Analyse IPMVP")
 st.markdown("""
 Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
-Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives.
+Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le **meilleur modèle d'ajustement** basé sur plusieurs variables explicatives.
 
 ### **🛠️ Instructions :**
-1. **Importer un fichier Excel 📂** contenant les données de consommation.
-2. **Sélectionner la colonne de date, la consommation et les variables explicatives 📊**.
+1. **Importer un fichier Excel 📂** contenant les données de consommation sur plusieurs années (*exemple : 3 ans de consommation*).
+2. **Sélectionner la colonne de date 📅, la consommation ⚡ et les variables explicatives 📊**.
 3. **Choisir le nombre de variables à tester 🔢** (de 1 à 4).
-4. **Lancer le calcul 🚀** et obtenir le **meilleur modèle** avec une analyse graphique.
+4. **Lancer le calcul 🚀** pour identifier le **meilleur modèle d’ajustement sur une période de 12 mois glissants**.
+
+📌 **Pourquoi 12 mois glissants ?**  
+L’analyse est réalisée sur **plusieurs sous-périodes de 12 mois** pour trouver la meilleure corrélation avec vos variables explicatives et obtenir un modèle fiable.
 """)
 
 # 📂 **Import du fichier et lancement du calcul**
@@ -107,10 +110,11 @@ df = None
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
-date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
-conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
+# 📌 Sélection des colonnes avec explication des données
+date_col = st.sidebar.selectbox("📅 Nom de la colonne date (ex : 'Date')", df.columns if df is not None else [""])
+conso_col = st.sidebar.selectbox("⚡ Nom de la colonne consommation (ex : 'Consommation')", df.columns if df is not None else [""])
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
-selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
+selected_vars = st.sidebar.multiselect("📊 Variables explicatives (ex : 'DJU', 'Effectif')", var_options)
 
 # Nombre de variables à tester
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
@@ -119,6 +123,7 @@ max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 if df is not None and lancer_calcul:
     st.subheader("⚙️ Analyse en cours...")
 
+    df[date_col] = pd.to_datetime(df[date_col])
     X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
     y = df[conso_col]
 
@@ -139,56 +144,47 @@ if df is not None and lancer_calcul:
     best_features = []
     best_y_pred = None
 
-    # 🔹 Test des combinaisons de variables
-    for n in range(1, max_features + 1):
-        for combo in combinations(selected_vars, n):
-            X_subset = X[list(combo)]
-            model = LinearRegression()
-            model.fit(X_subset, y)
-            y_pred = model.predict(X_subset)
-            r2 = r2_score(y, y_pred)
-            rmse = np.sqrt(mean_squared_error(y, y_pred))
-            cv = rmse / np.mean(y) if np.mean(y) != 0 else np.inf
-            bias = np.mean(y_pred - y) / np.mean(y) if np.mean(y) != 0 else np.inf
+    # 🔹 Test sur plusieurs périodes glissantes de 12 mois
+    periodes = df[date_col].dt.to_period('M').unique()
+    if len(periodes) >= 12:
+        for i in range(len(periodes) - 11):
+            periode_actuelle = periodes[i:i+12]
+            df_subset = df[df[date_col].dt.to_period('M').isin(periode_actuelle)]
 
-            if r2 > best_r2:
-                best_r2 = r2
-                best_model = model
-                best_features = list(combo)
-                best_y_pred = y_pred
-                best_cv = cv
-                best_bias = bias
+            X_subset = df_subset[selected_vars]
+            y_subset = df_subset[conso_col]
+
+            for n in range(1, max_features + 1):
+                for combo in combinations(selected_vars, n):
+                    X_temp = X_subset[list(combo)]
+                    model = LinearRegression()
+                    model.fit(X_temp, y_subset)
+                    y_pred = model.predict(X_temp)
+                    r2 = r2_score(y_subset, y_pred)
+                    rmse = np.sqrt(mean_squared_error(y_subset, y_pred))
+                    cv = rmse / np.mean(y_subset) if np.mean(y_subset) != 0 else np.inf
+                    bias = np.mean(y_pred - y_subset) / np.mean(y_subset) if np.mean(y_subset) != 0 else np.inf
+
+                    if r2 > best_r2:
+                        best_r2 = r2
+                        best_model = model
+                        best_features = list(combo)
+                        best_y_pred = y_pred
+                        best_cv = cv
+                        best_bias = bias
 
     # 🔹 Résultats du modèle sélectionné
     if best_model:
         st.success("✅ Modèle trouvé avec succès !")
-
-        # Formule du modèle
-        intercept = best_model.intercept_
-        coefficients = best_model.coef_
-        equation = f"{intercept:.4f}"
-        for i, coef in enumerate(coefficients):
-            equation += f" + {coef:.4f} × ({best_features[i]})"
-
-        # Conformité IPMVP
-        conforme = best_r2 > 0.75 and abs(best_cv) < 0.2 and abs(best_bias) < 0.01
-        statut_ipmvp = "✅ Conforme au protocole IPMVP" if conforme else "❌ Non conforme au protocole IPMVP"
-
-        # 📊 **Affichage des résultats**
         st.markdown("### 📋 Résumé du modèle")
         st.write(f"**📈 R² :** `{best_r2:.4f}`")
         st.write(f"**📉 CV(RMSE) :** `{best_cv:.4f}`")
         st.write(f"**⚠️ NMBE (Biais normalisé) :** `{best_bias:.6f}`")
         st.write(f"**🛠️ Type de modèle :** `Régression Linéaire`")
-        st.write(f"**📜 Formule d'ajustement :** `{equation}`")
-        st.write(f"**🔎 Conformité IPMVP :** `{statut_ipmvp}`")
 
-        # 📊 **Graphique de consommation**
         st.markdown("### 📊 Comparaison Consommation Mesurée vs Ajustée")
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.bar(range(len(y)), y, color="#6DBABC", label="Consommation mesurée")
-        ax.plot(range(len(y)), best_y_pred, color="#E74C3C", marker='o', label="Consommation ajustée")
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
+        ax.plot(best_y_pred, color="#E74C3C", marker='o', label="Consommation ajustée")
         ax.legend()
         st.pyplot(fig)
 
