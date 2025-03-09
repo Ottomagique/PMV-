@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
-import matplotlib.pyplot as plt  # ✅ Ajout de l'import pour éviter l'erreur
+import matplotlib.pyplot as plt  # ✅ Ajout pour affichage graphique
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, mean_squared_error
 
 # 📌 Configuration de la page
 st.set_page_config(
@@ -14,70 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
-
-    html, body, [class*="st-"] {
-        font-family: 'Manrope', sans-serif;
-        color: #0C1D2D;
-    }
-
-    h1, h2, h3 {
-        font-weight: 800;
-        color: #00485F;
-    }
-
-    h4, h5, h6 {
-        font-weight: 700;
-        color: #00485F;
-    }
-
-    .stButton>button {
-        background-color: #6DBABC;
-        color: white;
-        border-radius: 8px;
-        padding: 12px 18px;
-        font-size: 16px;
-        font-weight: bold;
-        border: none;
-        transition: all 0.3s ease-in-out;
-    }
-
-    .stButton>button:hover {
-        background-color: #96B91D;
-        color: white;
-        transform: scale(1.05);
-    }
-
-    .stSidebar {
-        background-color: #E7DDD9;
-        padding: 20px;
-        border-radius: 10px;
-    }
-
-    input, select, textarea {
-        background-color: #E7DDD9 !important;
-        border-radius: 5px;
-        border: 1px solid #00485F;
-    }
-
-    .block-container {
-        padding: 2rem;
-        border-radius: 10px;
-        background-color: #E7DDD9;
-    }
-
-    .stDataFrame {
-        border: 1px solid #0C1D2D;
-        border-radius: 10px;
-    }
-
-    </style>
-    """, unsafe_allow_html=True)
-
-# 📌 **Description de l'application**
+# 📌 Description de l'application
 st.title("📊 Analyse IPMVP")
 st.markdown("""
 Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
@@ -91,7 +28,7 @@ Cette application vous permet d'analyser **vos données de consommation énergé
 """)
 
 # 📂 **Import du fichier et lancement du calcul**
-col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
+col1, col2 = st.columns([3, 1])
 
 with col1:
     uploaded_file = st.file_uploader("📂 Importer un fichier Excel", type=["xlsx", "xls"])
@@ -99,19 +36,16 @@ with col1:
 with col2:
     lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
 
-# 📂 **Sélection des données (toujours visible même sans fichier importé)**
+# 📂 **Sélection des données**
 st.sidebar.header("🔍 Sélection des données")
 
-df = None  # Initialisation pour éviter des erreurs
+df = None
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)  # Chargement du fichier
+    df = pd.read_excel(uploaded_file)
 
-# **Définition des colonnes pour la sélection AVANT import**
 date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
 conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
-
-# **Variables explicatives (seulement après importation du fichier)**
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
 selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
 
@@ -125,7 +59,7 @@ if df is not None and lancer_calcul:
     X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
     y = df[conso_col]
 
-    # Nettoyage des données avant entraînement
+    # Nettoyage des données
     if X.isnull().values.any() or np.isinf(X.values).any():
         st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
         st.stop()
@@ -140,8 +74,9 @@ if df is not None and lancer_calcul:
     best_model = None
     best_r2 = -1
     best_features = []
+    best_y_pred = None
 
-    # 🔹 Test des combinaisons de variables (de 1 à max_features)
+    # 🔹 Test des combinaisons de variables
     for n in range(1, max_features + 1):
         for combo in combinations(selected_vars, n):
             X_subset = X[list(combo)]
@@ -149,25 +84,56 @@ if df is not None and lancer_calcul:
             model.fit(X_subset, y)
             y_pred = model.predict(X_subset)
             r2 = r2_score(y, y_pred)
+            rmse = np.sqrt(mean_squared_error(y, y_pred))
+            cv = rmse / np.mean(y) if np.mean(y) != 0 else np.inf
+            bias = np.mean(y_pred - y) / np.mean(y) if np.mean(y) != 0 else np.inf
 
             if r2 > best_r2:
                 best_r2 = r2
                 best_model = model
                 best_features = list(combo)
+                best_y_pred = y_pred
+                best_cv = cv
+                best_bias = bias
 
     # 🔹 Résultats du modèle sélectionné
     if best_model:
         st.success("✅ Modèle trouvé avec succès !")
-        st.write(f"**Meilleures variables utilisées :** {', '.join(best_features)}")
-        st.write(f"**R² du modèle :** {best_r2:.4f}")
 
-        # 🔹 Graphique de consommation
+        # Formule du modèle
+        intercept = best_model.intercept_
+        coefficients = best_model.coef_
+        equation = f"{intercept:.4f}"
+        for i, coef in enumerate(coefficients):
+            equation += f" + {coef:.4f} × ({best_features[i]})"
+
+        # Conformité IPMVP
+        conforme = best_r2 > 0.75 and abs(best_cv) < 0.2 and abs(best_bias) < 0.01
+        statut_ipmvp = "✅ Conforme au protocole IPMVP" if conforme else "❌ Non conforme au protocole IPMVP"
+
+        # 📊 **Affichage des résultats**
+        st.markdown("### 📋 Résumé du modèle")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("📈 R² (coefficient de détermination)", f"{best_r2:.4f}")
+            st.metric("📉 CV(RMSE) (coefficient de variation)", f"{best_cv:.4f}")
+            st.metric("⚠️ NMBE (Biais normalisé)", f"{best_bias:.6f}")
+
+        with col2:
+            st.metric("🛠️ Type de modèle", "Régression Linéaire")
+            st.metric("📜 Formule du modèle", equation)
+            st.metric("🔎 Conformité IPMVP", statut_ipmvp)
+
+        # 📊 **Graphique de consommation**
+        st.markdown("### 📊 Comparaison Consommation Mesurée vs Ajustée")
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.bar(range(len(y)), y, color="#6DBABC", label="Consommation mesurée")
-        ax.plot(range(len(y)), best_model.predict(df[best_features]), color="#E74C3C", marker='o', label="Consommation ajustée")
+        ax.plot(range(len(y)), best_y_pred, color="#E74C3C", marker='o', label="Consommation ajustée")
         ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
         ax.legend()
         st.pyplot(fig)
+
     else:
         st.error("⚠️ Aucun modèle valide n'a été trouvé.")
 
