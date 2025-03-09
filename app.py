@@ -6,10 +6,10 @@ from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
-# ✅ Configuration de la page
+# ✅ Configuration de la page (inchangé)
 st.set_page_config(page_title="Analyse IPMVP", page_icon="📊", layout="wide")
 
-# ✅ Appliquer le style CSS existant
+# ✅ Appliquer le CSS personnalisé existant (inchangé)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -22,13 +22,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ✅ Explication en haut de l'application (inchangé)
-st.markdown("### 📌 Le modèle teste des **périodes glissantes de 12 mois** pour trouver la meilleure corrélation.")
+# ✅ Message de bienvenue (inchangé)
+st.markdown("### 🎯 **Bienvenue dans l'application d'analyse IPMVP !**")
+st.write("Cette application vous permet d'analyser vos données de consommation énergétique en fonction de divers facteurs explicatifs selon la méthodologie IPMVP.")
 
-# ✅ Import du fichier
+# ✅ Section : Importation du fichier
 st.sidebar.subheader("📂 **Importer un fichier Excel**")
 uploaded_file = st.sidebar.file_uploader("", type=["xlsx", "xls"])
 
+# ✅ Vérification du fichier
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success(f"📄 Fichier chargé : **{uploaded_file.name}**")
@@ -43,11 +45,11 @@ conso_col = st.sidebar.selectbox("⚡ **Nom de la colonne consommation**", df.co
 var_explicatives = st.sidebar.multiselect("📊 **Variables explicatives**", [col for col in df.columns if col not in [date_col, conso_col]])
 nb_var = st.sidebar.slider("🔢 **Nombre de variables à tester**", 1, min(4, len(var_explicatives)), 1)
 
-# ✅ Conversion date
+# ✅ Conversion de la colonne date et suppression des valeurs NaN
 df[date_col] = pd.to_datetime(df[date_col])
 df = df.dropna()
 
-# ✅ Modèle IPMVP
+# ✅ Classe pour la modélisation IPMVP
 class ModelIPMVP:
     def __init__(self):
         self.best_model = None
@@ -89,9 +91,11 @@ class ModelIPMVP:
                         [f"{coef:.4f} × {feat}" for coef, feat in zip(self.best_model.coef_, self.best_features)])
                     self.best_model_type = "Régression Linéaire"
 
-# ✅ Exécution du modèle si "Lancer le calcul" est cliqué
+# ✅ Bouton de lancement de l'analyse
 if st.sidebar.button("🚀 Lancer le calcul"):
     st.info("⚙️ **Analyse en cours...**")
+    
+    # ✅ Création du modèle et exécution
     modele_ipmvp = ModelIPMVP()
     modele_ipmvp.trouver_meilleur_modele(df[var_explicatives], df[conso_col])
 
