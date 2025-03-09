@@ -586,6 +586,49 @@ if df is not None and lancer_calcul:
                                 y_pred = m_obj.predict(X_subset)
                                 r2 = r2_score(y, y_pred)
                                 
+                                # Calcul des métriques
+                                rmse = np.sqrt(mean_squared_error(y, y_pred))
+                                mae = mean_absolute_error(y, y_pred)
+                                cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+                                bias = np.mean(y_pred - y) / np.mean(y) * 100
+                                
+                                # Récupération des coefficients selon le type de modèle
+                                if m_type == "Linéaire":
+                                    coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+                                    intercept = m_obj.intercept_
+                                elif m_type in ["Ridge", "Lasso"]:
+                                    coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+                                    intercept = m_obj.intercept_
+                                elif m_type == "Polynomiale":
+                                    # Pour le modèle polynomial, nous gardons une représentation simplifiée
+                                    linear_model = m_obj.named_steps['linear']
+                                    poly = m_obj.named_steps['poly']
+                                    feature_names = poly.get_feature_names_out(input_features=combo)
+                                    coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+                                    intercept = linear_model.intercept_
+                                
+                                # Statut de conformité IPMVP
+                                conformite, classe = evaluer_conformite(r2, cv_rmse)
+                                
+                                # Ajouter le modèle à la liste de tous les modèles testés
+                                model_info = {
+                                    'features': list(combo),
+                                    'r2': r2,
+                                    'rmse': rmse,
+                                    'cv_rmse': cv_rmse,
+                                    'mae': mae,
+                                    'bias': bias,
+                                    'coefficients': coefs,
+                                    'intercept': intercept,
+                                    'conformite': conformite,
+                                    'classe': classe,
+                                    'model_type': m_type,
+                                    'model_name': m_name,
+                                    'period': period_name
+                                }
+                                all_models.append(model_info)
+                                
+                                # Mettre à jour le meilleur modèle si nécessaire
                                 if r2 > best_period_r2:
                                     best_period_r2 = r2
                                     best_period_start = period_start
@@ -595,45 +638,8 @@ if df is not None and lancer_calcul:
                                     best_period_model = m_obj
                                     best_period_features = list(combo)
                                     
-                                    # Calcul des métriques
-                                    rmse = np.sqrt(mean_squared_error(y, y_pred))
-                                    mae = mean_absolute_error(y, y_pred)
-                                    cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                                    bias = np.mean(y_pred - y) / np.mean(y) * 100
-                                    
-                                    # Récupération des coefficients selon le type de modèle
-                                    if m_type == "Linéaire":
-                                        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                                        intercept = m_obj.intercept_
-                                    elif m_type in ["Ridge", "Lasso"]:
-                                        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                                        intercept = m_obj.intercept_
-                                    elif m_type == "Polynomiale":
-                                        # Pour le modèle polynomial, nous gardons une représentation simplifiée
-                                        linear_model = m_obj.named_steps['linear']
-                                        poly = m_obj.named_steps['poly']
-                                        feature_names = poly.get_feature_names_out(input_features=combo)
-                                        coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
-                                        intercept = linear_model.intercept_
-                                    
-                                    # Statut de conformité IPMVP
-                                    conformite, classe = evaluer_conformite(r2, cv_rmse)
-                                    
-                                    # Stockage des métriques
-                                    best_period_metrics = {
-                                        'features': list(combo),
-                                        'r2': r2,
-                                        'rmse': rmse,
-                                        'cv_rmse': cv_rmse,
-                                        'mae': mae,
-                                        'bias': bias,
-                                        'coefficients': coefs,
-                                        'intercept': intercept,
-                                        'conformite': conformite,
-                                        'classe': classe,
-                                        'model_type': m_type,
-                                        'model_name': m_name
-                                    }
+                                    # Stockage des métriques du meilleur modèle
+                                    best_period_metrics = model_info
                         else:
                             # Création du modèle selon le type sélectionné
                             if model_type == "Linéaire":
@@ -658,6 +664,49 @@ if df is not None and lancer_calcul:
                             y_pred = model.predict(X_subset)
                             r2 = r2_score(y, y_pred)
                             
+                            # Calcul des métriques
+                            rmse = np.sqrt(mean_squared_error(y, y_pred))
+                            mae = mean_absolute_error(y, y_pred)
+                            cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+                            bias = np.mean(y_pred - y) / np.mean(y) * 100
+                            
+                            # Récupération des coefficients selon le type de modèle
+                            if model_type == "Linéaire":
+                                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                                intercept = model.intercept_
+                            elif model_type in ["Ridge", "Lasso"]:
+                                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                                intercept = model.intercept_
+                            elif model_type == "Polynomiale":
+                                # Pour le modèle polynomial, nous gardons une représentation simplifiée
+                                linear_model = model.named_steps['linear']
+                                poly = model.named_steps['poly']
+                                feature_names = poly.get_feature_names_out(input_features=combo)
+                                coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+                                intercept = linear_model.intercept_
+                            
+                            # Statut de conformité IPMVP
+                            conformite, classe = evaluer_conformite(r2, cv_rmse)
+                            
+                            # Ajouter le modèle à la liste de tous les modèles testés
+                            model_info = {
+                                'features': list(combo),
+                                'r2': r2,
+                                'rmse': rmse,
+                                'cv_rmse': cv_rmse,
+                                'mae': mae,
+                                'bias': bias,
+                                'coefficients': coefs,
+                                'intercept': intercept,
+                                'conformite': conformite,
+                                'classe': classe,
+                                'model_type': model_type,
+                                'model_name': model_name,
+                                'period': period_name
+                            }
+                            all_models.append(model_info)
+                            
+                            # Mettre à jour le meilleur modèle si nécessaire
                             if r2 > best_period_r2:
                                 best_period_r2 = r2
                                 best_period_start = period_start
@@ -667,46 +716,10 @@ if df is not None and lancer_calcul:
                                 best_period_model = model
                                 best_period_features = list(combo)
                                 
-                                # Calcul des métriques
-                                rmse = np.sqrt(mean_squared_error(y, y_pred))
-                                mae = mean_absolute_error(y, y_pred)
-                                cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                                bias = np.mean(y_pred - y) / np.mean(y) * 100
-                                
-                                # Récupération des coefficients selon le type de modèle
-                                if model_type == "Linéaire":
-                                    coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                                    intercept = model.intercept_
-                                elif model_type in ["Ridge", "Lasso"]:
-                                    coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                                    intercept = model.intercept_
-                                elif model_type == "Polynomiale":
-                                    # Pour le modèle polynomial, nous gardons une représentation simplifiée
-                                    linear_model = model.named_steps['linear']
-                                    poly = model.named_steps['poly']
-                                    feature_names = poly.get_feature_names_out(input_features=combo)
-                                    coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
-                                    intercept = linear_model.intercept_
-                                
-                                # Statut de conformité IPMVP
-                                conformite, classe = evaluer_conformite(r2, cv_rmse)
-                                
-                                # Stockage des métriques
-                                best_period_metrics = {
-                                    'features': list(combo),
-                                    'r2': r2,
-                                    'rmse': rmse,
-                                    'cv_rmse': cv_rmse,
-                                    'mae': mae,
-                                    'bias': bias,
-                                    'coefficients': coefs,
-                                    'intercept': intercept,
-                                    'conformite': conformite,
-                                    'classe': classe,
-                                    'model_type': model_type,
-                                    'model_name': model_name
-                                }
-                    except:
+                                # Stockage des métriques du meilleur modèle
+                                best_period_metrics = model_info
+                    except Exception as e:
+                        # st.warning(f"Erreur lors de l'analyse d'une combinaison : {str(e)}")
                         continue
             
             # Mise à jour de la barre de progression
@@ -770,9 +783,6 @@ if df is not None and lancer_calcul:
                 
                 # Si mode automatique, tester tous les types de modèles
                 if model_type == "Automatique (meilleur modèle)":
-                    # Créer une liste pour stocker les résultats des différents modèles
-                    temp_models = []
-                    
                     # Tester chaque type de modèle
                     model_types_to_test = [
                         ("Linéaire", LinearRegression(), "Régression linéaire"),
@@ -785,8 +795,86 @@ if df is not None and lancer_calcul:
                     ]
                     
                     for m_type, m_obj, m_name in model_types_to_test:
-                        m_obj.fit(X_subset, y)
-                        y_pred = m_obj.predict(X_subset)
+                        try:
+                            m_obj.fit(X_subset, y)
+                            y_pred = m_obj.predict(X_subset)
+                            
+                            # Calcul des métriques
+                            r2 = r2_score(y, y_pred)
+                            rmse = np.sqrt(mean_squared_error(y, y_pred))
+                            mae = mean_absolute_error(y, y_pred)
+                            cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+                            bias = np.mean(y_pred - y) / np.mean(y) * 100
+                            
+                            # Récupération des coefficients selon le type de modèle
+                            if m_type == "Linéaire":
+                                coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+                                intercept = m_obj.intercept_
+                            elif m_type in ["Ridge", "Lasso"]:
+                                coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+                                intercept = m_obj.intercept_
+                            elif m_type == "Polynomiale":
+                                # Pour le modèle polynomial, nous prenons une représentation simplifiée
+                                linear_model = m_obj.named_steps['linear']
+                                poly = m_obj.named_steps['poly']
+                                feature_names = poly.get_feature_names_out(input_features=combo)
+                                coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+                                intercept = linear_model.intercept_
+                            
+                            # Statut de conformité IPMVP
+                            conformite, classe = evaluer_conformite(r2, cv_rmse)
+                            
+                            # Création du modèle et ajout à la liste
+                            model_info = {
+                                'features': list(combo),
+                                'r2': r2,
+                                'rmse': rmse,
+                                'cv_rmse': cv_rmse,
+                                'mae': mae,
+                                'bias': bias,
+                                'coefficients': coefs,
+                                'intercept': intercept,
+                                'conformite': conformite,
+                                'classe': classe,
+                                'model_type': m_type,
+                                'model_name': m_name,
+                                'period': 'selected'
+                            }
+                            all_models.append(model_info)
+                            
+                            # Mettre à jour le meilleur modèle si nécessaire
+                            if r2 > best_r2:
+                                best_r2 = r2
+                                best_model = m_obj
+                                best_features = list(combo)
+                                best_metrics = model_info
+                        except Exception as e:
+                            # st.warning(f"Erreur lors de l'analyse : {str(e)}")
+                            continue
+                
+                else:
+                    # Création du modèle selon le type sélectionné
+                    try:
+                        if model_type == "Linéaire":
+                            model = LinearRegression()
+                            model_name = "Régression linéaire"
+                        elif model_type == "Ridge":
+                            model = Ridge(alpha=alpha_ridge)
+                            model_name = f"Régression Ridge (α={alpha_ridge})"
+                        elif model_type == "Lasso":
+                            model = Lasso(alpha=alpha_lasso)
+                            model_name = f"Régression Lasso (α={alpha_lasso})"
+                        elif model_type == "Polynomiale":
+                            model = Pipeline([
+                                ('poly', PolynomialFeatures(degree=poly_degree)),
+                                ('linear', LinearRegression())
+                            ])
+                            model_name = f"Régression polynomiale (degré {poly_degree})"
+                        
+                        model.fit(X_subset, y)
+                        
+                        # Prédictions selon le type de modèle
+                        y_pred = model.predict(X_subset)
                         
                         # Calcul des métriques
                         r2 = r2_score(y, y_pred)
@@ -796,16 +884,16 @@ if df is not None and lancer_calcul:
                         bias = np.mean(y_pred - y) / np.mean(y) * 100
                         
                         # Récupération des coefficients selon le type de modèle
-                        if m_type == "Linéaire":
-                            coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                            intercept = m_obj.intercept_
-                        elif m_type in ["Ridge", "Lasso"]:
-                            coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                            intercept = m_obj.intercept_
-                        elif m_type == "Polynomiale":
-                            # Pour le modèle polynomial, nous prenons une représentation simplifiée
-                            linear_model = m_obj.named_steps['linear']
-                            poly = m_obj.named_steps['poly']
+                        if model_type == "Linéaire":
+                            coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                            intercept = model.intercept_
+                        elif model_type in ["Ridge", "Lasso"]:
+                            coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                            intercept = model.intercept_
+                        elif model_type == "Polynomiale":
+                            # Pour le modèle polynomial, nous gardons une représentation simplifiée
+                            linear_model = model.named_steps['linear']
+                            poly = model.named_steps['poly']
                             feature_names = poly.get_feature_names_out(input_features=combo)
                             coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
                             intercept = linear_model.intercept_
@@ -813,7 +901,7 @@ if df is not None and lancer_calcul:
                         # Statut de conformité IPMVP
                         conformite, classe = evaluer_conformite(r2, cv_rmse)
                         
-                        # Stockage des résultats du modèle
+                        # Création du modèle et ajout à la liste
                         model_info = {
                             'features': list(combo),
                             'r2': r2,
@@ -825,97 +913,24 @@ if df is not None and lancer_calcul:
                             'intercept': intercept,
                             'conformite': conformite,
                             'classe': classe,
-                            'model': m_obj,
-                            'model_type': m_type,
-                            'model_name': m_name
+                            'model_type': model_type,
+                            'model_name': model_name,
+                            'period': 'selected'
                         }
-                        
-                        temp_models.append(model_info)
                         all_models.append(model_info)
-                    
-                    # Trouver le meilleur modèle parmi ceux testés
-                    best_temp_model = max(temp_models, key=lambda x: x['r2'])
-                    
-                    if best_temp_model['r2'] > best_r2:
-                        best_r2 = best_temp_model['r2']
-                        best_model = best_temp_model['model']
-                        best_features = best_temp_model['features']
-                        best_metrics = best_temp_model
-                
-                else:
-                    # Création du modèle selon le type sélectionné
-                    if model_type == "Linéaire":
-                        model = LinearRegression()
-                        model_name = "Régression linéaire"
-                    elif model_type == "Ridge":
-                        model = Ridge(alpha=alpha_ridge)
-                        model_name = f"Régression Ridge (α={alpha_ridge})"
-                    elif model_type == "Lasso":
-                        model = Lasso(alpha=alpha_lasso)
-                        model_name = f"Régression Lasso (α={alpha_lasso})"
-                    elif model_type == "Polynomiale":
-                        model = Pipeline([
-                            ('poly', PolynomialFeatures(degree=poly_degree)),
-                            ('linear', LinearRegression())
-                        ])
-                        model_name = f"Régression polynomiale (degré {poly_degree})"
-                    
-                    model.fit(X_subset, y)
-                    
-                    # Prédictions selon le type de modèle
-                    y_pred = model.predict(X_subset)
-                    
-                    # Calcul des métriques
-                    r2 = r2_score(y, y_pred)
-                    rmse = np.sqrt(mean_squared_error(y, y_pred))
-                    mae = mean_absolute_error(y, y_pred)
-                    cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                    bias = np.mean(y_pred - y) / np.mean(y) * 100
-                    
-                    # Récupération des coefficients selon le type de modèle
-                    if model_type == "Linéaire":
-                        coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                        intercept = model.intercept_
-                    elif model_type in ["Ridge", "Lasso"]:
-                        coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-                        intercept = model.intercept_
-                    elif model_type == "Polynomiale":
-                        # Pour le modèle polynomial, nous gardons une représentation simplifiée
-                        linear_model = model.named_steps['linear']
-                        poly = model.named_steps['poly']
-                        feature_names = poly.get_feature_names_out(input_features=combo)
-                        coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
-                        intercept = linear_model.intercept_
-                    
-                    # Statut de conformité IPMVP
-                    conformite, classe = evaluer_conformite(r2, cv_rmse)
-                    
-                    # Stockage du modèle
-                    model_info = {
-                        'features': list(combo),
-                        'r2': r2,
-                        'rmse': rmse,
-                        'cv_rmse': cv_rmse,
-                        'mae': mae,
-                        'bias': bias,
-                        'coefficients': coefs,
-                        'intercept': intercept,
-                        'conformite': conformite,
-                        'classe': classe,
-                        'model': model,
-                        'model_type': model_type,
-                        'model_name': model_name
-                    }
-                    all_models.append(model_info)
+                        
+                        # Mettre à jour le meilleur modèle si nécessaire
+                        if r2 > best_r2:
+                            best_r2 = r2
+                            best_model = model
+                            best_features = list(combo)
+                            best_metrics = model_info
+                    except Exception as e:
+                        # st.warning(f"Erreur lors de l'analyse : {str(e)}")
+                        continue
 
-                    if r2 > best_r2:
-                        best_r2 = r2
-                        best_model = model
-                        best_features = list(combo)
-                        best_metrics = model_info
-
-        # 🔹 Tri des modèles par R² décroissant
-        all_models.sort(key=lambda x: x['r2'], reverse=True)
+    # 🔹 Tri des modèles par R² décroissant
+    all_models.sort(key=lambda x: x['r2'], reverse=True)
 
     # 🔹 Résultats du modèle sélectionné
     if best_model:
@@ -1141,14 +1156,25 @@ if df is not None and lancer_calcul:
         # 🔹 Tableau des résultats pour tous les modèles testés
         st.subheader("📋 Classement des modèles testés")
         
-        # Vérifier que all_models existe et n'est pas vide
-        if all_models:
+        # Assurer que la liste all_models est unique par modèle et variables
+        # C'est-à-dire qu'il n'y a pas de doublons du même modèle avec les mêmes variables
+        seen = set()
+        unique_models = []
+        for model in all_models:
+            key = (model['model_name'], tuple(sorted(model['features'])))
+            if key not in seen:
+                seen.add(key)
+                unique_models.append(model)
+        
+        # Vérifier que unique_models existe et n'est pas vide
+        if unique_models:
             # Trier par R² décroissant
-            all_models.sort(key=lambda x: x['r2'], reverse=True)
+            unique_models.sort(key=lambda x: x['r2'], reverse=True)
             
             models_summary = []
             
-            for i, model in enumerate(all_models[:min(10, len(all_models))]):  # Afficher jusqu'à 10 modèles
+            # Afficher jusqu'à 15 modèles pour donner une vue plus complète
+            for i, model in enumerate(unique_models[:min(15, len(unique_models))]):
                 models_summary.append({
                     "Rang": i+1,
                     "Type": model['model_name'],
