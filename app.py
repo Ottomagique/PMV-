@@ -59,7 +59,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 📌 **Description de l'application améliorée**
+# 📌 **Description de l'application**
 st.title("📊 Analyse IPMVP")
 st.markdown("""
 Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
@@ -179,5 +179,7 @@ if df is not None and st.session_state.lancer_calcul:
     st.write(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
     st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
 
-st.sidebar.markdown("---")
-st.sidebar.info("💡 Développé avec <span style='color:green;'>❤️</span> par **Efficacité Energétique, Carbone & RSE Team** | © 2025", unsafe_allow_html=True)
+st.sidebar.markdown("""
+💡 Développé avec <span style='color:green; font-weight:bold;'>❤️</span> 
+par **Efficacité Energétique, Carbone & RSE Team** | © 2025
+""", unsafe_allow_html=True)
