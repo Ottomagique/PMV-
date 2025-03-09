@@ -1,4 +1,43 @@
 import streamlit as st
+# Appliquer le CSS personnalisé
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+
+    html, body, [class*="st-"] {
+        font-family: 'Manrope', sans-serif;
+        color: #0C1D2D;
+    }
+
+    h1, h2, h3 {
+        font-weight: 800; /* ExtraBold */
+    }
+
+    h4, h5, h6 {
+        font-weight: 700; /* Bold */
+    }
+
+    .stButton>button {
+        background-color: #00485F;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        border: none;
+        font-size: 16px;
+        transition: 0.3s;
+    }
+
+    .stButton>button:hover {
+        background-color: #96B91D; /* Vert Greenaffair */
+    }
+
+    .stSidebar {
+        background-color: #6DBABC;
+    }
+    
+    </style>
+    """, unsafe_allow_html=True)
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
