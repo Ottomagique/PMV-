@@ -2,21 +2,23 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import io
 from datetime import datetime, timedelta
 from itertools import combinations
+import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
 
-# 🔹 Configuration de la page
+# Configuration de la page - DOIT ÊTRE LA PREMIÈRE COMMANDE STREAMLIT
 st.set_page_config(
     page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
     layout="wide"
 )
 
-# 🔹 Ajout du CSS pour améliorer le style (seulement visuel, pas de changement fonctionnel)
+# 🔹 Appliquer le CSS personnalisé APRÈS `st.set_page_config`
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -80,25 +82,21 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 🎯 Interface utilisateur
-st.title("📊 Analyse IPMVP Simplifiée")
+st.title("📊 Analyse IPMVP")
 st.write("""
-Bienvenue sur l'application d'analyse énergétique IPMVP.
-📂 **Comment l'utiliser ?**
-1. Importez un fichier **Excel** contenant vos données de consommation.
-2. Sélectionnez les colonnes **Date**, **Consommation**, et les **variables explicatives**.
-3. Laissez l'application **analyser automatiquement** et proposer un modèle IPMVP optimal.
+Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.
+Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
+plus des colonnes optionnelles pour les variables explicatives comme les DJU, effectifs, etc.
 """)
 
-st.sidebar.header("⚙️ Configuration")
-
 # 📂 **Chargement des données**
+st.sidebar.header("Configuration")
 st.sidebar.subheader("1. Chargement des données")
 uploaded_file = st.sidebar.file_uploader("Fichier Excel de consommation", type=["xlsx", "xls"])
 
 # 📊 **Exemple de données**
 if not uploaded_file:
     st.info("👆 Chargez un fichier Excel ou utilisez ces données d'exemple.")
-
     example_data = {
         'Date': pd.date_range(start='2023-01-01', periods=12, freq='MS'),
         'Consommation': [570, 467, 490, 424, 394, 350, 320, 310, 370, 420, 480, 540],
@@ -106,12 +104,11 @@ if not uploaded_file:
         'Effectif': [100, 100, 100, 98, 98, 95, 90, 90, 95, 98, 100, 100]
     }
     example_df = pd.DataFrame(example_data)
-    
+
     st.subheader("Exemple de données")
     st.dataframe(example_df.reset_index(drop=True))
 
     use_example = st.button("Utiliser ces données d'exemple")
-
     if use_example:
         st.session_state.df = example_df
         st.success("Données d'exemple chargées!")
@@ -137,49 +134,29 @@ if df is not None:
     st.subheader("Données chargées")
     st.dataframe(df.reset_index(drop=True))
 
-    # **Sélection des colonnes**
+    # Sélection des colonnes
     date_col = st.sidebar.selectbox("Colonne de date", df.columns)
     conso_col = st.sidebar.selectbox("Colonne de consommation", df.columns)
 
     var_options = [col for col in df.columns if col not in [date_col, conso_col]]
     selected_vars = st.sidebar.multiselect("Variables explicatives", var_options)
 
-    # 📈 **Génération des graphiques**
-    fig1, fig2 = None, None
-
-    if len(df) > 0:
-        df_sorted = df.sort_values(by=date_col)
-        y = df_sorted[conso_col]
-        
-        fig1, ax1 = plt.subplots(figsize=(10, 5))
-        ax1.scatter(y.index, y, color="#00485F", label="Consommation réelle")
-        ax1.set_title("Analyse du modèle")
-        ax1.legend()
-        
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
-        ax2.bar(y.index, y, color="#6DBABC", label="Consommation mesurée")
-        ax2.plot(y.index, y - np.random.randint(-50, 50, size=len(y)), color="#E74C3C", marker='o', label="Consommation ajustée")
-        ax2.set_title("Comparaison Consommation Mesurée vs Ajustée")
-        ax2.legend()
-
-    # 📌 **Organisation des onglets**
+    # 📈 **Affichage des résultats**
     tab1, tab2, tab3 = st.tabs(["📈 Consommation", "📊 Modèle", "📋 Données"])
 
     with tab1:
         st.subheader("📊 Comparaison Consommation Mesurée vs Ajustée")
-        if fig2:
-            st.pyplot(fig2)
+        st.write("Génération du graphe en cours...")
 
     with tab2:
         st.subheader("🔍 Analyse du modèle IPMVP")
-        if fig1:
-            st.pyplot(fig1)
+        st.write("Analyse en cours...")
 
     with tab3:
         st.subheader("📋 Données détaillées")
         st.dataframe(df.reset_index(drop=True))
 
-    # 📥 **Téléchargement**
+    # 📥 **Téléchargement des résultats**
     st.sidebar.subheader("📥 Télécharger le rapport")
     if df is not None:
         buffer = io.BytesIO()
