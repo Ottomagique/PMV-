@@ -2,22 +2,21 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
 
-# Configuration de la page
+# 🔹 Configuration de la page
 st.set_page_config(
     page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
     layout="wide"
 )
 
-# 🔹 Ajout du CSS pour améliorer l'affichage
+# 🔹 Ajout du CSS pour améliorer le style (seulement visuel, pas de changement fonctionnel)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -28,7 +27,7 @@ st.markdown("""
     }
 
     h1, h2, h3 {
-        font-weight: 800; 
+        font-weight: 800;
         color: #00485F;
     }
 
@@ -41,7 +40,7 @@ st.markdown("""
         background-color: #6DBABC;
         color: white;
         border-radius: 8px;
-        padding: 12px 20px;
+        padding: 12px 18px;
         font-size: 16px;
         font-weight: bold;
         border: none;
@@ -170,15 +169,11 @@ if df is not None:
         st.subheader("📊 Comparaison Consommation Mesurée vs Ajustée")
         if fig2:
             st.pyplot(fig2)
-        else:
-            st.warning("Pas encore de données à afficher.")
 
     with tab2:
         st.subheader("🔍 Analyse du modèle IPMVP")
         if fig1:
             st.pyplot(fig1)
-        else:
-            st.warning("Pas encore de données à afficher.")
 
     with tab3:
         st.subheader("📋 Données détaillées")
