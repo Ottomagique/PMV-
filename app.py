@@ -11,14 +11,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
 
-# Configuration de la page - DOIT ÊTRE LA PREMIÈRE COMMANDE STREAMLIT
+# Configuration de la page
 st.set_page_config(
     page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS personnalisé APRÈS `st.set_page_config`
+# 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -94,27 +94,7 @@ st.sidebar.header("Configuration")
 st.sidebar.subheader("1. Chargement des données")
 uploaded_file = st.sidebar.file_uploader("Fichier Excel de consommation", type=["xlsx", "xls"])
 
-# 📊 **Exemple de données**
-if not uploaded_file:
-    st.info("👆 Chargez un fichier Excel ou utilisez ces données d'exemple.")
-    example_data = {
-        'Date': pd.date_range(start='2023-01-01', periods=12, freq='MS'),
-        'Consommation': [570, 467, 490, 424, 394, 350, 320, 310, 370, 420, 480, 540],
-        'DJU_Base_18': [460, 380, 320, 240, 150, 50, 20, 30, 130, 230, 350, 430],
-        'Effectif': [100, 100, 100, 98, 98, 95, 90, 90, 95, 98, 100, 100]
-    }
-    example_df = pd.DataFrame(example_data)
-
-    st.subheader("Exemple de données")
-    st.dataframe(example_df.reset_index(drop=True))
-
-    use_example = st.button("Utiliser ces données d'exemple")
-    if use_example:
-        st.session_state.df = example_df
-        st.success("Données d'exemple chargées!")
-        st.rerun()
-
-# 📌 **Lecture du fichier**
+# 📌 Lecture du fichier (Fonction inchangée)
 @st.cache_data
 def load_data(file):
     """Charge les données depuis un fichier Excel"""
@@ -127,22 +107,19 @@ def load_data(file):
 df = None
 if uploaded_file is not None:
     df = load_data(uploaded_file)
-elif hasattr(st.session_state, 'df'):
-    df = st.session_state.df
 
 if df is not None:
     st.subheader("Données chargées")
     st.dataframe(df.reset_index(drop=True))
 
-    # Sélection des colonnes
+    # Sélection des colonnes (Inchangé)
     date_col = st.sidebar.selectbox("Colonne de date", df.columns)
     conso_col = st.sidebar.selectbox("Colonne de consommation", df.columns)
-
     var_options = [col for col in df.columns if col not in [date_col, conso_col]]
     selected_vars = st.sidebar.multiselect("Variables explicatives", var_options)
 
     # 📈 **Affichage des résultats**
-    tab1, tab2, tab3 = st.tabs(["📈 Consommation", "📊 Modèle", "📋 Données"])
+    tab1, tab2, tab3 = st.tabs(["📈 Consommation", "📊 Modèle", "📋 Données"])  # 👉 Onglet "Consommation" en premier
 
     with tab1:
         st.subheader("📊 Comparaison Consommation Mesurée vs Ajustée")
@@ -155,14 +132,6 @@ if df is not None:
     with tab3:
         st.subheader("📋 Données détaillées")
         st.dataframe(df.reset_index(drop=True))
-
-    # 📥 **Téléchargement des résultats**
-    st.sidebar.subheader("📥 Télécharger le rapport")
-    if df is not None:
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name="Données", index=False)
-        st.sidebar.download_button("📂 Télécharger", buffer.getvalue(), file_name="rapport_IPMVP.xlsx")
 
 st.sidebar.markdown("---")
 st.sidebar.info("Développé avec ❤️ et Streamlit 🚀")
