@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔹 Appliquer le CSS **(Respecte la charte graphique d'origine)**
+# 🔹 Appliquer le CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -22,7 +22,6 @@ st.markdown("""
     html, body, [class*="st-"] {
         font-family: 'Manrope', sans-serif;
         color: #0C1D2D;
-        background-color: #F8F6F2;
     }
 
     h1, h2, h3 {
@@ -132,7 +131,7 @@ def plot_consumption(y_actual, y_pred, dates):
 # 📌 **Lancer le calcul après sélection des variables**
 if df is not None and st.session_state.lancer_calcul:
     with st.spinner("⏳ Analyse en cours..."):
-        df[date_col] = pd.to_datetime(df[date_col])
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
         df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')
         df = df.dropna(subset=[conso_col])  
 
@@ -176,8 +175,5 @@ if df is not None and st.session_state.lancer_calcul:
                             best_dates = df_subset[date_col]
 
     st.success("✅ Résultats de l'analyse")
-    st.write(f"**📌 Meilleur Modèle :** `{'Régression Linéaire'}`")
-    st.write(f"**📑 Équation d'ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
+    st.write(f"**📑 Équation d’ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
     st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
-
-st.sidebar.write("💡 **Développé par Efficacité Energétique, Carbone & RSE Team | © 2025**")
