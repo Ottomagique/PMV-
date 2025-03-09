@@ -136,7 +136,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 📌 **Description de l'application**
-st.title("📊 Analyse IPMVP")
+st.title("📊 Calcul IPMVP")
 st.markdown("""
 Bienvenue sur **l'Analyse IPMVP Professionnelle** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
@@ -152,9 +152,10 @@ st.markdown("""
         <ul>
             <li>La colonne de date</li>
             <li>La colonne de consommation énergétique</li>
-            <li>Les variables explicatives potentielles (température, production, etc.)</li>
+            <li>Les variables explicatives potentielles (Ensoleillement, DJU, etc.)</li>
         </ul>
     </li>
+    <li><strong>Recherche automatique</strong> : L'application analyse automatiquement toutes les périodes glissantes de 12 mois dans vos données et sélectionne celle qui produit le meilleur modèle</li>
     <li><strong>Configuration de l'analyse</strong> : Choisissez le nombre maximum de variables à combiner (1 à 4)</li>
     <li><strong>Lancement</strong> : Cliquez sur "Lancer le calcul" pour obtenir le meilleur modèle d'ajustement</li>
     <li><strong>Analyse des résultats</strong> : Examinez les métriques (R², CV, biais), l'équation d'ajustement et les visualisations générées</li>
@@ -183,6 +184,15 @@ if uploaded_file:
 date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
 conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
 
+# Option pour rechercher automatiquement la meilleure période de 12 mois
+auto_best_period = st.sidebar.checkbox("🔍 Rechercher automatiquement la meilleure période de 12 mois", value=True)
+
+# Variables pour stocker les informations de la meilleure période
+best_period_start = None
+best_period_end = None
+best_period_name = None
+best_period_r2 = -1
+
 # **Variables explicatives (seulement après importation du fichier)**
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
 selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
@@ -202,74 +212,209 @@ def evaluer_conformite(r2, cv_rmse):
 # 📌 **Lancement du calcul seulement si le bouton est cliqué**
 if df is not None and lancer_calcul:
     st.subheader("⚙️ Analyse en cours...")
-
-    X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
-    y = df[conso_col]
-
-    # Nettoyage des données avant entraînement
-    if X.isnull().values.any() or np.isinf(X.values).any():
-        st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
-        st.stop()
-
-    if y.isnull().values.any() or np.isinf(y.values).any():
-        st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
-        st.stop()
-
-    X = X.apply(pd.to_numeric, errors='coerce').dropna()
-    y = pd.to_numeric(y, errors='coerce').dropna()
-
-    best_model = None
-    best_r2 = -1
-    best_features = []
-    best_metrics = {}
-    all_models = []
-
-    # 🔹 Test des combinaisons de variables (de 1 à max_features)
-    for n in range(1, max_features + 1):
-        for combo in combinations(selected_vars, n):
-            X_subset = X[list(combo)]
-            model = LinearRegression()
-            model.fit(X_subset, y)
-            y_pred = model.predict(X_subset)
+    
+    # Convertir la colonne de date si elle ne l'est pas déjà
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        try:
+            df[date_col] = pd.to_datetime(df[date_col])
+            # Trier le dataframe par date
+            df = df.sort_values(by=date_col)
+        except:
+            st.error("❌ La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
+            st.stop()
+    
+    # Vérifier s'il y a suffisamment de données (au moins 12 mois)
+    if auto_best_period:
+        date_ranges = []
+        min_date = df[date_col].min()
+        max_date = df[date_col].max()
+        current_date = min_date
+        
+        while current_date + pd.DateOffset(months=11) <= max_date:
+            end_date = current_date + pd.DateOffset(months=11)
+            period_name = f"{current_date.strftime('%b %Y')} - {end_date.strftime('%b %Y')}"
+            date_ranges.append((period_name, current_date, end_date))
+            current_date = current_date + pd.DateOffset(months=1)
+        
+        if not date_ranges:
+            st.error("❌ Pas assez de données pour une analyse sur 12 mois. Assurez-vous d'avoir au moins 12 mois de données.")
+            st.stop()
             
-            # Calcul des métriques
-            r2 = r2_score(y, y_pred)
-            rmse = np.sqrt(mean_squared_error(y, y_pred))
-            mae = mean_absolute_error(y, y_pred)
-            cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-            bias = np.mean(y_pred - y) / np.mean(y) * 100
+        progress_bar = st.progress(0)
+        progress_text = st.empty()
+        
+        best_period_data = None
+        best_period_model = None
+        best_period_features = None
+        best_period_metrics = None
+        best_period_r2 = -1
+        
+        for idx, (period_name, period_start, period_end) in enumerate(date_ranges):
+            progress_text.text(f"Analyse de la période {period_name} ({idx+1}/{len(date_ranges)})")
             
-            # Récupération des coefficients
-            coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
-            intercept = model.intercept_
+            # Filtrer les données pour cette période
+            period_df = df[(df[date_col] >= period_start) & (df[date_col] <= period_end)]
             
-            # Statut de conformité IPMVP
-            conformite, classe = evaluer_conformite(r2, cv_rmse)
+            # Vérifier que les données sont suffisantes
+            if len(period_df) < 10:  # Éviter les périodes avec trop peu de données
+                continue
+                
+            X = period_df[selected_vars] if selected_vars else pd.DataFrame(index=period_df.index)
+            y = period_df[conso_col]
             
-            # Stockage du modèle
-            model_info = {
-                'features': list(combo),
-                'r2': r2,
-                'rmse': rmse,
-                'cv_rmse': cv_rmse,
-                'mae': mae,
-                'bias': bias,
-                'coefficients': coefs,
-                'intercept': intercept,
-                'conformite': conformite,
-                'classe': classe,
-                'model': model
-            }
-            all_models.append(model_info)
+            # Nettoyage des données avant entraînement
+            if X.isnull().values.any() or np.isinf(X.values).any():
+                continue
+                
+            if y.isnull().values.any() or np.isinf(y.values).any():
+                continue
+                
+            X = X.apply(pd.to_numeric, errors='coerce').dropna()
+            y = pd.to_numeric(y, errors='coerce').dropna()
+            
+            # Test des combinaisons de variables
+            for n in range(1, max_features + 1):
+                for combo in combinations(selected_vars, n):
+                    X_subset = X[list(combo)]
+                    
+                    try:
+                        model = LinearRegression()
+                        model.fit(X_subset, y)
+                        y_pred = model.predict(X_subset)
+                        r2 = r2_score(y, y_pred)
+                        
+                        if r2 > best_period_r2:
+                            best_period_r2 = r2
+                            best_period_start = period_start
+                            best_period_end = period_end
+                            best_period_name = period_name
+                            best_period_data = period_df
+                            best_period_model = model
+                            best_period_features = list(combo)
+                            
+                            # Calcul des métriques
+                            rmse = np.sqrt(mean_squared_error(y, y_pred))
+                            mae = mean_absolute_error(y, y_pred)
+                            cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+                            bias = np.mean(y_pred - y) / np.mean(y) * 100
+                            
+                            # Récupération des coefficients
+                            coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                            intercept = model.intercept_
+                            
+                            # Statut de conformité IPMVP
+                            conformite, classe = evaluer_conformite(r2, cv_rmse)
+                            
+                            # Stockage des métriques
+                            best_period_metrics = {
+                                'features': list(combo),
+                                'r2': r2,
+                                'rmse': rmse,
+                                'cv_rmse': cv_rmse,
+                                'mae': mae,
+                                'bias': bias,
+                                'coefficients': coefs,
+                                'intercept': intercept,
+                                'conformite': conformite,
+                                'classe': classe
+                            }
+                    except:
+                        continue
+            
+            # Mise à jour de la barre de progression
+            progress_bar.progress((idx + 1) / len(date_ranges))
+        
+        progress_bar.empty()
+        progress_text.empty()
+        
+        if best_period_data is not None:
+            st.success(f"✅ Meilleure période trouvée : {best_period_name}")
+            st.info(f"Période : {best_period_start.strftime('%d/%m/%Y')} - {best_period_end.strftime('%d/%m/%Y')}")
+            
+            # Utiliser les meilleurs résultats trouvés
+            df_filtered = best_period_data
+            best_model = best_period_model
+            best_features = best_period_features
+            best_metrics = best_period_metrics
+            
+            # Afficher les détails sur les données
+            st.markdown(f"**📊 Nombre de points de données :** {len(df_filtered)}")
+            
+            # Continuer avec l'affichage des résultats (voir ci-dessous)
+        else:
+            st.error("❌ Aucun modèle valide n'a été trouvé sur les périodes analysées.")
+            st.stop()
+    else:
+        # Si l'option automatique n'est pas activée, utiliser toutes les données
+        df_filtered = df
+        
+        X = df_filtered[selected_vars] if selected_vars else pd.DataFrame(index=df_filtered.index)
+        y = df_filtered[conso_col]
 
-            if r2 > best_r2:
-                best_r2 = r2
-                best_model = model
-                best_features = list(combo)
-                best_metrics = model_info
+        # Nettoyage des données avant entraînement
+        if X.isnull().values.any() or np.isinf(X.values).any():
+            st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
+            st.stop()
 
-    # 🔹 Tri des modèles par R² décroissant
-    all_models.sort(key=lambda x: x['r2'], reverse=True)
+        if y.isnull().values.any() or np.isinf(y.values).any():
+            st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
+            st.stop()
+
+        X = X.apply(pd.to_numeric, errors='coerce').dropna()
+        y = pd.to_numeric(y, errors='coerce').dropna()
+
+        best_model = None
+        best_r2 = -1
+        best_features = []
+        best_metrics = {}
+        all_models = []
+
+        # 🔹 Test des combinaisons de variables (de 1 à max_features)
+        for n in range(1, max_features + 1):
+            for combo in combinations(selected_vars, n):
+                X_subset = X[list(combo)]
+                model = LinearRegression()
+                model.fit(X_subset, y)
+                y_pred = model.predict(X_subset)
+                
+                # Calcul des métriques
+                r2 = r2_score(y, y_pred)
+                rmse = np.sqrt(mean_squared_error(y, y_pred))
+                mae = mean_absolute_error(y, y_pred)
+                cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+                bias = np.mean(y_pred - y) / np.mean(y) * 100
+                
+                # Récupération des coefficients
+                coefs = {feature: coef for feature, coef in zip(combo, model.coef_)}
+                intercept = model.intercept_
+                
+                # Statut de conformité IPMVP
+                conformite, classe = evaluer_conformite(r2, cv_rmse)
+                
+                # Stockage du modèle
+                model_info = {
+                    'features': list(combo),
+                    'r2': r2,
+                    'rmse': rmse,
+                    'cv_rmse': cv_rmse,
+                    'mae': mae,
+                    'bias': bias,
+                    'coefficients': coefs,
+                    'intercept': intercept,
+                    'conformite': conformite,
+                    'classe': classe,
+                    'model': model
+                }
+                all_models.append(model_info)
+
+                if r2 > best_r2:
+                    best_r2 = r2
+                    best_model = model
+                    best_features = list(combo)
+                    best_metrics = model_info
+
+        # 🔹 Tri des modèles par R² décroissant
+        all_models.sort(key=lambda x: x['r2'], reverse=True)
 
     # 🔹 Résultats du modèle sélectionné
     if best_model:
@@ -320,7 +465,7 @@ if df is not None and lancer_calcul:
         st.subheader("📈 Visualisation des résultats")
         
         # Prédictions du modèle
-        X_best = df[best_features]
+        X_best = df_filtered[best_features]
         y_pred = best_model.predict(X_best)
         
         # Configuration du style des graphiques pour correspondre au thème
@@ -451,6 +596,6 @@ st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
-    <p>Outil professionnel d'analyse et de modélisation énergétique conforme IPMVP</p>
+    <p>Outil d'analyse et de modélisation énergétique conforme IPMVP</p>
 </div>
 """, unsafe_allow_html=True)
