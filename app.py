@@ -1,131 +1,180 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import io
 import matplotlib.pyplot as plt
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
-# ✅ Configuration de la page (inchangé)
-st.set_page_config(page_title="Analyse IPMVP", page_icon="📊", layout="wide")
+# 📌 Configuration de la page
+st.set_page_config(
+    page_title="Analyse IPMVP Simplifiée",
+    page_icon="📊",
+    layout="wide"
+)
 
-# ✅ Appliquer le CSS personnalisé existant (inchangé)
+# 🔹 Appliquer le CSS personnalisé (sans le bleu)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
-    html, body, [class*="st-"] { font-family: 'Manrope', sans-serif; color: #0C1D2D; }
-    h1, h2, h3 { font-weight: 800; }
-    h4, h5, h6 { font-weight: 700; }
-    .stButton>button { background-color: #00485F; color: white; border-radius: 8px; }
-    .stButton>button:hover { background-color: #96B91D; }
-    .stSidebar { background-color: #6DBABC; }
+
+    html, body, [class*="st-"] {
+        font-family: 'Manrope', sans-serif;
+        color: #0C1D2D;
+        background-color: #F8F6F2;
+    }
+
+    h1, h2, h3 {
+        font-weight: 800;
+        color: #00485F;
+    }
+
+    .stButton>button {
+        background-color: #6DBABC;
+        color: white;
+        border-radius: 8px;
+        padding: 12px 18px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .stButton>button:hover {
+        background-color: #96B91D;
+        transform: scale(1.05);
+    }
+
+    .stSidebar {
+        background-color: #E7DDD9;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    input, select, textarea {
+        background-color: #E7DDD9 !important;
+        border-radius: 5px;
+        border: 1px solid #00485F;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# ✅ Message de bienvenue (inchangé)
-st.markdown("### 🎯 **Bienvenue dans l'application d'analyse IPMVP !**")
-st.write("Cette application vous permet d'analyser vos données de consommation énergétique en fonction de divers facteurs explicatifs selon la méthodologie IPMVP.")
+# 📌 **Description de l'application**
+st.title("📊 Analyse IPMVP")
+st.markdown("""
+Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
+Cette application analyse votre **consommation énergétique** et ajuste un modèle en fonction des variables explicatives.
 
-# ✅ Section : Importation du fichier
-st.sidebar.subheader("📂 **Importer un fichier Excel**")
-uploaded_file = st.sidebar.file_uploader("", type=["xlsx", "xls"])
+### **🛠️ Instructions :**
+1. **Importer un fichier Excel 📂** avec au moins une colonne de dates et une colonne de consommation.
+2. **Sélectionner la colonne de date 📅, la consommation ⚡ et les variables explicatives 📊**.
+3. **Choisir le nombre de variables à tester 🔢** (de 1 à 4).
+4. **Lancer le calcul 🚀** pour identifier le **meilleur modèle**.
 
-# ✅ Vérification du fichier
+📌 **Le modèle teste des périodes glissantes de 12 mois** pour trouver la meilleure corrélation.
+""")
+
+# 📂 **Import du fichier et lancement du calcul**
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    uploaded_file = st.file_uploader("📂 Importer un fichier Excel", type=["xlsx", "xls"])
+
+with col2:
+    lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
+
+if "lancer_calcul" not in st.session_state:
+    st.session_state.lancer_calcul = False
+
+if lancer_calcul:
+    st.session_state.lancer_calcul = True
+
+# 📂 **Sélection des données**
+st.sidebar.header("🔍 Sélection des données")
+
+df = None
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    st.success(f"📄 Fichier chargé : **{uploaded_file.name}**")
-else:
-    st.warning("📌 Importez un fichier pour commencer l'analyse.")
-    st.stop()
 
-# ✅ Sélection des colonnes
-st.sidebar.subheader("🔍 **Sélection des données**")
-date_col = st.sidebar.selectbox("📅 **Nom de la colonne date**", df.columns)
-conso_col = st.sidebar.selectbox("⚡ **Nom de la colonne consommation**", df.columns)
-var_explicatives = st.sidebar.multiselect("📊 **Variables explicatives**", [col for col in df.columns if col not in [date_col, conso_col]])
-nb_var = st.sidebar.slider("🔢 **Nombre de variables à tester**", 1, min(4, len(var_explicatives)), 1)
+# 📌 Sélection des colonnes
+date_col = st.sidebar.selectbox("📅 Nom de la colonne Date", df.columns if df is not None else [""])
+conso_col = st.sidebar.selectbox("⚡ Nom de la colonne Consommation", df.columns if df is not None else [""])
+var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
+selected_vars = st.sidebar.multiselect("📊 Variables Explicatives", var_options)
 
-# ✅ Conversion de la colonne date et suppression des valeurs NaN
-df[date_col] = pd.to_datetime(df[date_col])
-df = df.dropna()
+max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
-# ✅ Classe pour la modélisation IPMVP
-class ModelIPMVP:
-    def __init__(self):
-        self.best_model = None
-        self.best_r2 = 0
-        self.best_cv = None
-        self.best_bias = None
-        self.best_features = []
-        self.best_formula = ""
-        self.best_model_type = ""
-
-    def evaluer_combinaison(self, X, y, features):
-        """Évalue un modèle avec les variables sélectionnées"""
-        X_subset = X[features]
-        model = LinearRegression()
-        model.fit(X_subset, y)
-        y_pred = model.predict(X_subset)
-
-        r2 = r2_score(y, y_pred)
-        cv = np.sqrt(mean_squared_error(y, y_pred)) / np.mean(y)
-        bias = np.mean(y_pred - y) / np.mean(y)
-        conforme = r2 > 0.75 and abs(cv) < 0.2 and abs(bias) < 0.01
-
-        return {
-            "r2": r2, "cv": cv, "bias": bias, "model": model, "conforme": conforme, "y_pred": y_pred
-        }
-
-    def trouver_meilleur_modele(self, X, y):
-        """Teste toutes les combinaisons et trouve le meilleur modèle"""
-        for n in range(1, nb_var + 1):
-            for combo in combinations(var_explicatives, n):
-                result = self.evaluer_combinaison(X, y, list(combo))
-                if result["conforme"] and result["r2"] > self.best_r2:
-                    self.best_model = result["model"]
-                    self.best_r2 = result["r2"]
-                    self.best_cv = result["cv"]
-                    self.best_bias = result["bias"]
-                    self.best_features = list(combo)
-                    self.best_formula = f"y = {self.best_model.intercept_:.4f} + " + " + ".join(
-                        [f"{coef:.4f} × {feat}" for coef, feat in zip(self.best_model.coef_, self.best_features)])
-                    self.best_model_type = "Régression Linéaire"
-
-# ✅ Bouton de lancement de l'analyse
-if st.sidebar.button("🚀 Lancer le calcul"):
-    st.info("⚙️ **Analyse en cours...**")
+# 📌 **Graphique amélioré : Consommation réelle vs Ajustée**
+def plot_consumption(y_actual, y_pred, dates):
+    fig, ax = plt.subplots(figsize=(12, 6))
     
-    # ✅ Création du modèle et exécution
-    modele_ipmvp = ModelIPMVP()
-    modele_ipmvp.trouver_meilleur_modele(df[var_explicatives], df[conso_col])
+    fig.patch.set_facecolor("#E7DDD9")  # Fond beige du thème
+    ax.set_facecolor("#F8F6F2")  # Fond clair pour lisibilité
 
-    # ✅ Affichage des résultats (sans changer le design)
-    st.success("✅ **Résultats de l'analyse**")
-
-    st.markdown(f"🏆 **Modèle sélectionné** : `{modele_ipmvp.best_model_type}`")
-    st.markdown(f"📋 **Conformité IPMVP** : ✅ Conforme" if modele_ipmvp.best_r2 > 0.75 else "❌ Non conforme")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("🎯 R²", f"{modele_ipmvp.best_r2:.4f}")
-    col2.metric("📉 CV(RMSE)", f"{modele_ipmvp.best_cv:.4f}")
-    col3.metric("⚖ Biais (NMBE)", f"{modele_ipmvp.best_bias:.6f}")
-
-    st.markdown(f"✏️ **Équation d’ajustement :** `{modele_ipmvp.best_formula}`")
-    st.markdown(f"🔍 **Variables utilisées** : {', '.join(modele_ipmvp.best_features)}")
-
-    # ✅ Affichage du graphique (design inchangé)
-    st.markdown("### 📊 **Comparaison Consommation Mesurée vs Ajustée**")
-    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.bar(dates, y_actual, color="#00485F", label="🔵 Consommation réelle", alpha=0.8, width=0.6)
+    ax.plot(dates, y_pred, color="#E74C3C", marker='o', linestyle='-', linewidth=2.5, markersize=7, 
+            label="🔴 Consommation ajustée")
     
-    ax.bar(df[date_col], df[conso_col], color="#6DBABC", alpha=0.6, label="Consommation réelle")
-    ax.plot(df[date_col], modele_ipmvp.best_model.predict(df[var_explicatives]), color="#D32F2F", marker="o", linestyle="-", label="Consommation ajustée", linewidth=2)
+    ax.set_xlabel("📆 Mois", fontsize=12, fontweight="bold", color="#0C1D2D")
+    ax.set_ylabel("⚡ Consommation", fontsize=12, fontweight="bold", color="#0C1D2D")
+    ax.set_title("📊 Comparaison Consommation Mesurée vs Ajustée", fontsize=14, fontweight="bold", color="#00485F")
 
-    ax.set_xlabel("Mois")
-    ax.set_ylabel("Consommation")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    st.pyplot(fig)
+    ax.grid(True, linestyle="--", alpha=0.5, color="#B0BEC5")
 
-# ✅ Pied de page
-st.sidebar.markdown("---")
-st.sidebar.info("💡 Développé avec ❤️ par **Efficacité Energétique, Carbone & RSE Team** | © 2025")
+    ax.set_xticks(dates)
+    ax.set_xticklabels([d.strftime("%b %Y") for d in dates], rotation=45, ha="right")
+
+    ax.legend(loc="upper right", fontsize=12, frameon=True, fancybox=True, shadow=True, facecolor="#F8F6F2")
+
+    return fig
+
+# 📌 **Lancer le calcul après sélection des variables**
+if df is not None and st.session_state.lancer_calcul:
+    with st.spinner("⏳ Analyse en cours..."):
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+        df[conso_col] = pd.to_numeric(df[conso_col], errors='coerce')
+        df = df.dropna(subset=[conso_col])  
+
+        X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
+        y = df[conso_col]
+
+        best_model = None
+        best_r2 = -1
+        best_cv = None
+        best_bias = None
+        best_features = []
+        best_y_pred = None
+
+        periodes = df[date_col].dt.to_period('M').unique()
+        if len(periodes) >= 12:
+            for i in range(len(periodes) - 11):
+                periode_actuelle = periodes[i:i+12]
+                df_subset = df[df[date_col].dt.to_period('M').isin(periode_actuelle)]
+                X_subset = df_subset[selected_vars]
+                y_subset = df_subset[conso_col]
+
+                for n in range(1, max_features + 1):
+                    for combo in combinations(selected_vars, n):
+                        X_temp = X_subset[list(combo)]
+                        model = LinearRegression()
+                        model.fit(X_temp, y_subset)
+                        y_pred = model.predict(X_temp)
+
+                        r2 = r2_score(y_subset, y_pred)
+                        rmse = np.sqrt(mean_squared_error(y_subset, y_pred))
+                        cv = rmse / np.mean(y_subset)
+                        bias = np.mean(y_pred - y_subset) / np.mean(y_subset)
+
+                        if r2 > best_r2:
+                            best_r2 = r2
+                            best_cv = cv
+                            best_bias = bias
+                            best_model = model
+                            best_features = list(combo)
+                            best_y_pred = y_pred
+                            best_dates = df_subset[date_col]
+
+    st.success("✅ Résultats de l'analyse")
+    st.write(f"**📑 Équation d’ajustement :** `y = {best_model.intercept_:.4f} + {' + '.join([f'{coef:.4f} × {feat}' for coef, feat in zip(best_model.coef_, best_features)])}`")
+    st.pyplot(plot_consumption(y_subset, best_y_pred, best_dates))
