@@ -160,7 +160,7 @@ st.markdown("""
     <li><strong>Analyse des résultats</strong> : Examinez les métriques (R², CV, biais), l'équation d'ajustement et les visualisations générées</li>
 </ol>
 </div>
-""")
+""", unsafe_allow_html=True)
 
 # 📂 **Import du fichier et lancement du calcul**
 col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
