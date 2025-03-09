@@ -1,17 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import io
-from datetime import datetime, timedelta
 from itertools import combinations
-import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
 
-# Configuration de la page
+# 📌 Configuration de la page
 st.set_page_config(
     page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
@@ -83,18 +79,27 @@ st.markdown("""
 
 # 🎯 Interface utilisateur
 st.title("📊 Analyse IPMVP")
-st.write("""
-Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.
-Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
-plus des colonnes optionnelles pour les variables explicatives comme les DJU, effectifs, etc.
-""")
+
+st.sidebar.header("⚙️ Configuration")
+
+# 📂 **Sélection des colonnes avant chargement**
+st.sidebar.subheader("1. Sélection des colonnes")
+date_col = st.sidebar.text_input("Nom de la colonne de date", "Date")
+conso_col = st.sidebar.text_input("Nom de la colonne de consommation", "Consommation")
+
+# Sélection des variables explicatives
+var_input = st.sidebar.text_area("Noms des variables explicatives (séparés par une virgule)", "DJU_Base_18, Effectif")
+var_options = [col.strip() for col in var_input.split(",") if col.strip()]
+
+# Sélection du nombre de variables à tester (1 à 4)
+st.sidebar.subheader("2. Choix du modèle")
+max_features = st.sidebar.slider("Nombre de variables à tester", 1, 4, 2)
 
 # 📂 **Chargement des données**
-st.sidebar.header("Configuration")
-st.sidebar.subheader("1. Chargement des données")
+st.sidebar.subheader("3. Chargement des données")
 uploaded_file = st.sidebar.file_uploader("Fichier Excel de consommation", type=["xlsx", "xls"])
 
-# 📌 Lecture du fichier (Fonction inchangée)
+# 📌 Lecture du fichier
 @st.cache_data
 def load_data(file):
     """Charge les données depuis un fichier Excel"""
@@ -112,26 +117,54 @@ if df is not None:
     st.subheader("Données chargées")
     st.dataframe(df.reset_index(drop=True))
 
-    # Sélection des colonnes (Inchangé)
-    date_col = st.sidebar.selectbox("Colonne de date", df.columns)
-    conso_col = st.sidebar.selectbox("Colonne de consommation", df.columns)
-    var_options = [col for col in df.columns if col not in [date_col, conso_col]]
-    selected_vars = st.sidebar.multiselect("Variables explicatives", var_options)
+    # Vérifier que les colonnes existent
+    if date_col not in df.columns or conso_col not in df.columns:
+        st.error("Les noms de colonnes sélectionnés ne sont pas valides.")
+        st.stop()
 
-    # 📈 **Affichage des résultats**
-    tab1, tab2, tab3 = st.tabs(["📈 Consommation", "📊 Modèle", "📋 Données"])  # 👉 Onglet "Consommation" en premier
+    selected_vars = [col for col in var_options if col in df.columns]
 
-    with tab1:
-        st.subheader("📊 Comparaison Consommation Mesurée vs Ajustée")
-        st.write("Génération du graphe en cours...")
+    # Bouton pour lancer le calcul
+    if st.sidebar.button("🚀 Lancer le calcul"):
+        st.subheader("Analyse en cours...")
 
-    with tab2:
-        st.subheader("🔍 Analyse du modèle IPMVP")
-        st.write("Analyse en cours...")
+        # 🔹 Sélection des colonnes
+        X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
+        y = df[conso_col]
 
-    with tab3:
-        st.subheader("📋 Données détaillées")
-        st.dataframe(df.reset_index(drop=True))
+        best_model = None
+        best_r2 = -1
+        best_features = []
+        
+        # 🔹 Test des combinaisons de variables (de 1 à max_features)
+        for n in range(1, max_features + 1):
+            for combo in combinations(selected_vars, n):
+                X_subset = X[list(combo)]
+                model = LinearRegression()
+                model.fit(X_subset, y)
+                y_pred = model.predict(X_subset)
+                r2 = r2_score(y, y_pred)
+
+                if r2 > best_r2:
+                    best_r2 = r2
+                    best_model = model
+                    best_features = list(combo)
+
+        # 🔹 Résultats du modèle sélectionné
+        if best_model:
+            st.success("✅ Modèle trouvé avec succès !")
+            st.write(f"**Meilleures variables utilisées :** {', '.join(best_features)}")
+            st.write(f"**R² du modèle :** {best_r2:.4f}")
+
+            # 🔹 Graphique de consommation
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.bar(range(len(y)), y, color="#6DBABC", label="Consommation mesurée")
+            ax.plot(range(len(y)), best_model.predict(df[best_features]), color="#E74C3C", marker='o', label="Consommation ajustée")
+            ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
+            ax.legend()
+            st.pyplot(fig)
+        else:
+            st.error("⚠️ Aucun modèle valide n'a été trouvé.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("Développé avec ❤️ et Streamlit 🚀")
