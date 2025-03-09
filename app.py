@@ -18,108 +18,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Ajouter du CSS personnalisé
-st.markdown("""
-<style>
-    .reportview-container {
-        background-color: #F5F7FA;
-    }
-    .main {
-        background-color: #F5F7FA;
-    }
-    .card {
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        margin-bottom: 20px;
-        background-color: white;
-    }
-    .metric-container {
-        background-color: #E0E8F0;
-        border-radius: 5px;
-        padding: 15px;
-        text-align: center;
-        margin: 5px;
-    }
-    .metric-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: #1E88E5;
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #666;
-    }
-    .formula-box {
-        background-color: #E0E8F0;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: monospace;
-        margin: 10px 0;
-    }
-    h1, h2, h3 {
-        color: #1E88E5;
-    }
-    .highlight {
-        background-color: #e6f3ff;
-        padding: 5px;
-        border-radius: 3px;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #E0E8F0;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #1E88E5;
-        color: white;
-    }
-    
-    /* Amélioration des tableaux */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 25px 0;
-        font-size: 14px;
-        border-radius: 5px;
-        overflow: hidden;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-    }
-    th {
-        background-color: #1E88E5;
-        color: white;
-        text-align: left;
-        padding: 12px 15px;
-    }
-    td {
-        padding: 12px 15px;
-    }
-    tr:nth-child(even) {
-        background-color: #f8f9fa;
-    }
-    tr:hover {
-        background-color: #e6f3ff;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Titre de l'application
 st.title("📊 Analyse IPMVP")
-st.markdown("""
-<div class="card">
-    <p>Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.</p>
-    <p>Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
-    plus des colonnes optionnelles pour les variables explicatives comme les DJU, effectifs, etc.</p>
-    <p>Le modèle analysera automatiquement 12 mois glissants et trouvera la meilleure combinaison de variables.</p>
-</div>
-""", unsafe_allow_html=True)
+st.write("""
+Cette application vous permet d'analyser vos données de consommation énergétique selon le protocole IPMVP.
+Importez un fichier Excel avec au minimum une colonne de dates et une colonne de consommations,
+plus des colonnes optionnelles pour les variables explicatives comme les DJU, effectifs, etc.
+""")
 
 # Définition des fonctions d'analyse IPMVP
 @st.cache_data
@@ -424,7 +329,7 @@ uploaded_file = st.sidebar.file_uploader("Fichier Excel de consommation", type=[
 
 # Exemple de données
 if not uploaded_file:
-    st.info("👈 Chargez votre fichier Excel ou utilisez les données d'exemple ci-dessous.")
+    st.info("👆 Chargez votre fichier Excel ou utilisez les données d'exemple ci-dessous.")
     
     # Créer des données d'exemple sur 12 mois
     example_data = {
@@ -435,13 +340,11 @@ if not uploaded_file:
     }
     example_df = pd.DataFrame(example_data)
     
-    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Exemple de données")
     # Affichage sans les index
     st.dataframe(example_df.reset_index(drop=True))
     
     use_example = st.button("Utiliser ces données d'exemple")
-    st.markdown('</div>', unsafe_allow_html=True)
     
     if use_example:
         st.session_state.df = example_df
@@ -456,11 +359,9 @@ elif hasattr(st.session_state, 'df'):
     df = st.session_state.df
 
 if df is not None:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Données chargées")
     # Affichage sans les index
     st.dataframe(df.reset_index(drop=True))
-    st.markdown('</div>', unsafe_allow_html=True)
     
     # Identification automatique des colonnes
     date_col = None
@@ -539,8 +440,7 @@ if df is not None:
         # Afficher la période analysée
         start_date = df_analysis[date_col].min().strftime('%Y-%m-%d')
         end_date = df_analysis[date_col].max().strftime('%Y-%m-%d')
-        st.markdown(f'<div class="card"><p><strong>Période analysée</strong>: du {start_date} au {end_date}</p></div>', 
-                  unsafe_allow_html=True)
+        st.write(f"**Période analysée**: du {start_date} au {end_date}")
         
         # Préparation des données pour l'analyse
         X = df_analysis[selected_vars] if selected_vars else pd.DataFrame(index=df_analysis.index)
@@ -577,51 +477,29 @@ if df is not None:
             st.subheader("Résultats de l'analyse IPMVP")
             
             if format_rapport == "Format visuel":
-                # Affichage direct du rapport formaté sans passer par une fonction générant du HTML
-                st.markdown(f"""
-                <div class="card" style="border-left: 5px solid #28a745;">
-                    <h3 style="color: #28a745;">✅ Modèle IPMVP conforme</h3>
-                    <p>Type de modèle: <span style="background-color: #e6f3ff; padding: 5px; border-radius: 3px;">{modele_ipmvp.best_model_type}</span></p>
-                    
-                    <h4>Variables sélectionnées:</h4>
-                    <ul>
-                        {"".join([f"<li>{var}</li>" for var in modele_ipmvp.best_features])}
-                    </ul>
-                    
-                    <h4>Formule d'ajustement:</h4>
-                    <div style="background-color: #E0E8F0; padding: 10px; border-radius: 5px; font-family: monospace; margin: 10px 0;">
-                        {modele_ipmvp.best_formula}
-                    </div>
-                    
-                    <h4>Métriques de performance:</h4>
-                    <table style="width:100%; border-collapse: collapse;">
-                        <tr style="background-color: #E0E8F0;">
-                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Métrique</th>
-                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Valeur</th>
-                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Seuil IPMVP</th>
-                            <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Statut</th>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid #ddd;">R² (coefficient de détermination)</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_r2:.4f}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">> 0.75</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid #ddd;">CV(RMSE) (coefficient de variation)</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_cv:.4f}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.2</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px; border: 1px solid #ddd;">NMBE (biais normalisé)</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{modele_ipmvp.best_bias:.8f}</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">< 0.01</td>
-                            <td style="padding: 8px; text-align: center; border: 1px solid #ddd;">✅</td>
-                        </tr>
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
+                # Utilisation des composants natifs Streamlit sans HTML complexe
+                st.subheader(f"✅ Modèle IPMVP conforme")
+                st.write(f"**Type de modèle:** {modele_ipmvp.best_model_type}")
+                
+                st.write("**Variables sélectionnées:**")
+                for var in modele_ipmvp.best_features:
+                    st.write(f"- {var}")
+                
+                st.write("**Formule d'ajustement:**")
+                st.code(modele_ipmvp.best_formula)
+                
+                st.write("**Métriques de performance:**")
+                
+                metrics_df = pd.DataFrame({
+                    "Métrique": ["R² (coefficient de détermination)", "CV(RMSE) (coefficient de variation)", "NMBE (biais normalisé)"],
+                    "Valeur": [f"{modele_ipmvp.best_r2:.4f}", f"{modele_ipmvp.best_cv:.4f}", f"{modele_ipmvp.best_bias:.8f}"],
+                    "Seuil IPMVP": ["> 0.75", "< 0.2", "< 0.01"],
+                    "Statut": ["✅" if modele_ipmvp.best_r2 > 0.75 else "❌", 
+                              "✅" if modele_ipmvp.best_cv < 0.2 else "❌", 
+                              "✅" if abs(modele_ipmvp.best_bias) < 0.01 else "❌"]
+                })
+                
+                st.table(metrics_df)
             else:
                 rapport_texte = modele_ipmvp.generer_rapport()
                 st.text(rapport_texte)
@@ -664,14 +542,10 @@ if df is not None:
                 )
             
             # Informations supplémentaires sur le modèle
-            st.markdown(f"""
-            <div class="card">
-                <h4>Interprétation du modèle</h4>
-                <p>Le modèle utilise <b>{len(modele_ipmvp.best_features)}</b> variables pour expliquer les variations de consommation.</p>
-                <p>Type de modèle: <b>{modele_ipmvp.best_model_type}</b></p>
-                <p>Ce modèle explique <b>{modele_ipmvp.best_r2*100:.1f}%</b> des variations de la consommation.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.write("**Interprétation du modèle:**")
+            st.write(f"- Le modèle utilise **{len(modele_ipmvp.best_features)}** variables pour expliquer les variations de consommation.")
+            st.write(f"- Type de modèle: **{modele_ipmvp.best_model_type}**")
+            st.write(f"- Ce modèle explique **{modele_ipmvp.best_r2*100:.1f}%** des variations de la consommation.")
             
             # Visualisations
             results_df, fig1, fig2 = modele_ipmvp.visualiser_resultats(X, y, dates=df_analysis[date_col])
@@ -684,25 +558,20 @@ if df is not None:
                 
                 with tab1:
                     st.pyplot(fig1)
-                    st.markdown("**Analyse du modèle**: Ces graphiques montrent la qualité de l'ajustement du modèle.")
+                    st.write("**Analyse du modèle**: Ces graphiques montrent la qualité de l'ajustement du modèle.")
                 
                 with tab2:
                     st.pyplot(fig2)
-                    st.markdown("**Comparaison des consommations**: Ce graphique compare la consommation réelle mesurée avec celle calculée par le modèle.")
+                    st.write("**Comparaison des consommations**: Ce graphique compare la consommation réelle mesurée avec celle calculée par le modèle.")
                 
                 with tab3:
                     # Affichage des données sans index
                     st.dataframe(results_df.reset_index(drop=True))
-                    st.markdown("**Données détaillées**: Ce tableau présente les valeurs réelles, prédites et les erreurs du modèle.")
+                    st.write("**Données détaillées**: Ce tableau présente les valeurs réelles, prédites et les erreurs du modèle.")
                 
                 # Section de téléchargement des résultats
-                st.markdown("""
-                <div class="card">
-                    <h4>Téléchargement des résultats</h4>
-                    <p>Vous pouvez télécharger les résultats au format Excel, incluant les données originales, 
-                    les résultats du modèle et un résumé du rapport.</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.subheader("Téléchargement des résultats")
+                st.write("Vous pouvez télécharger les résultats au format Excel, incluant les données originales, les résultats du modèle et un résumé du rapport.")
                 
                 # Préparation des données pour l'export
                 buffer = io.BytesIO()
@@ -725,32 +594,26 @@ if df is not None:
                     }
                     pd.DataFrame(resume_data).to_excel(writer, sheet_name="Résumé", index=False)
                 
-                # Bouton de téléchargement avec une présentation améliorée
-                col1, col2, col3 = st.columns([1, 2, 1])
-                with col2:
-                    st.download_button(
-                        label="📥 Télécharger le rapport complet (Excel)",
-                        data=buffer.getvalue(),
-                        file_name=f"rapport_ipmvp_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                # Bouton de téléchargement
+                st.download_button(
+                    label="📥 Télécharger le rapport complet (Excel)",
+                    data=buffer.getvalue(),
+                    file_name=f"rapport_ipmvp_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             else:
                 st.error("Impossible de générer les visualisations.")
         else:
             status_text.text("Analyse terminée, mais aucun modèle conforme trouvé.")
             progress_bar.progress(1.0)
-            st.markdown("""
-            <div class="card" style="border-left: 5px solid #FFC107;">
-                <h3 style="color: #FFC107;">⚠️ Aucun modèle conforme</h3>
-                <p>Aucun modèle conforme aux critères IPMVP n'a pu être trouvé avec ces données.</p>
-                <h4>Suggestions:</h4>
-                <ul>
-                    <li>Vérifiez que vos données couvrent au moins 12 mois complets</li>
-                    <li>Ajoutez plus de variables explicatives (comme les DJU)</li>
-                    <li>Assurez-vous que vos variables explicatives sont corrélées avec la consommation</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+            st.warning("""
+            ⚠️ Aucun modèle conforme aux critères IPMVP n'a pu être trouvé avec ces données.
+            
+            Suggestions:
+            - Vérifiez que vos données couvrent au moins 12 mois complets
+            - Ajoutez plus de variables explicatives (comme les DJU)
+            - Assurez-vous que vos variables explicatives sont corrélées avec la consommation
+            """)
 
 # Footer
 st.sidebar.markdown("---")
