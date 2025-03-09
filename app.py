@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
-import matplotlib.pyplot as plt  # ✅ Ajout pour affichage graphique
+import matplotlib.pyplot as plt
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
@@ -14,7 +14,70 @@ st.set_page_config(
     layout="wide"
 )
 
-# 📌 Description de l'application
+# 🔹 Appliquer le CSS (Maintien du design existant)
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
+
+    html, body, [class*="st-"] {
+        font-family: 'Manrope', sans-serif;
+        color: #0C1D2D;
+    }
+
+    h1, h2, h3 {
+        font-weight: 800;
+        color: #00485F;
+    }
+
+    h4, h5, h6 {
+        font-weight: 700;
+        color: #00485F;
+    }
+
+    .stButton>button {
+        background-color: #6DBABC;
+        color: white;
+        border-radius: 8px;
+        padding: 12px 18px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .stButton>button:hover {
+        background-color: #96B91D;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .stSidebar {
+        background-color: #E7DDD9;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    input, select, textarea {
+        background-color: #E7DDD9 !important;
+        border-radius: 5px;
+        border: 1px solid #00485F;
+    }
+
+    .block-container {
+        padding: 2rem;
+        border-radius: 10px;
+        background-color: #E7DDD9;
+    }
+
+    .stDataFrame {
+        border: 1px solid #0C1D2D;
+        border-radius: 10px;
+    }
+
+    </style>
+    """, unsafe_allow_html=True)
+
+# 📌 **Description de l'application**
 st.title("📊 Analyse IPMVP")
 st.markdown("""
 Bienvenue sur **l'Analyse IPMVP Simplifiée** 🔍 !  
@@ -113,17 +176,12 @@ if df is not None and lancer_calcul:
 
         # 📊 **Affichage des résultats**
         st.markdown("### 📋 Résumé du modèle")
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.metric("📈 R² (coefficient de détermination)", f"{best_r2:.4f}")
-            st.metric("📉 CV(RMSE) (coefficient de variation)", f"{best_cv:.4f}")
-            st.metric("⚠️ NMBE (Biais normalisé)", f"{best_bias:.6f}")
-
-        with col2:
-            st.metric("🛠️ Type de modèle", "Régression Linéaire")
-            st.metric("📜 Formule du modèle", equation)
-            st.metric("🔎 Conformité IPMVP", statut_ipmvp)
+        st.write(f"**📈 R² :** `{best_r2:.4f}`")
+        st.write(f"**📉 CV(RMSE) :** `{best_cv:.4f}`")
+        st.write(f"**⚠️ NMBE (Biais normalisé) :** `{best_bias:.6f}`")
+        st.write(f"**🛠️ Type de modèle :** `Régression Linéaire`")
+        st.write(f"**📜 Formule d'ajustement :** `{equation}`")
+        st.write(f"**🔎 Conformité IPMVP :** `{statut_ipmvp}`")
 
         # 📊 **Graphique de consommation**
         st.markdown("### 📊 Comparaison Consommation Mesurée vs Ajustée")
@@ -133,9 +191,6 @@ if df is not None and lancer_calcul:
         ax.set_title("Comparaison Consommation Mesurée vs Ajustée")
         ax.legend()
         st.pyplot(fig)
-
-    else:
-        st.error("⚠️ Aucun modèle valide n'a été trouvé.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("Développé avec ❤️ et Streamlit 🚀")
