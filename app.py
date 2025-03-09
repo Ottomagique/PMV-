@@ -4,13 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score, mean_squared_error
 
 # ✅ Configuration de la page
 st.set_page_config(page_title="Analyse IPMVP", page_icon="📊", layout="wide")
 
-# ✅ Appliquer la charte graphique
+# ✅ Appliquer le style CSS existant
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -23,10 +22,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ✅ Explication en haut de l'application
+# ✅ Explication en haut de l'application (inchangé)
 st.markdown("### 📌 Le modèle teste des **périodes glissantes de 12 mois** pour trouver la meilleure corrélation.")
 
-# ✅ Chargement du fichier Excel
+# ✅ Import du fichier
 st.sidebar.subheader("📂 **Importer un fichier Excel**")
 uploaded_file = st.sidebar.file_uploader("", type=["xlsx", "xls"])
 
@@ -44,7 +43,7 @@ conso_col = st.sidebar.selectbox("⚡ **Nom de la colonne consommation**", df.co
 var_explicatives = st.sidebar.multiselect("📊 **Variables explicatives**", [col for col in df.columns if col not in [date_col, conso_col]])
 nb_var = st.sidebar.slider("🔢 **Nombre de variables à tester**", 1, min(4, len(var_explicatives)), 1)
 
-# ✅ Préparation des données
+# ✅ Conversion date
 df[date_col] = pd.to_datetime(df[date_col])
 df = df.dropna()
 
@@ -53,6 +52,8 @@ class ModelIPMVP:
     def __init__(self):
         self.best_model = None
         self.best_r2 = 0
+        self.best_cv = None
+        self.best_bias = None
         self.best_features = []
         self.best_formula = ""
         self.best_model_type = ""
@@ -94,7 +95,7 @@ if st.sidebar.button("🚀 Lancer le calcul"):
     modele_ipmvp = ModelIPMVP()
     modele_ipmvp.trouver_meilleur_modele(df[var_explicatives], df[conso_col])
 
-    # ✅ Affichage des résultats
+    # ✅ Affichage des résultats (sans changer le design)
     st.success("✅ **Résultats de l'analyse**")
 
     st.markdown(f"🏆 **Modèle sélectionné** : `{modele_ipmvp.best_model_type}`")
@@ -106,10 +107,9 @@ if st.sidebar.button("🚀 Lancer le calcul"):
     col3.metric("⚖ Biais (NMBE)", f"{modele_ipmvp.best_bias:.6f}")
 
     st.markdown(f"✏️ **Équation d’ajustement :** `{modele_ipmvp.best_formula}`")
-
     st.markdown(f"🔍 **Variables utilisées** : {', '.join(modele_ipmvp.best_features)}")
 
-    # ✅ Affichage du graphique
+    # ✅ Affichage du graphique (design inchangé)
     st.markdown("### 📊 **Comparaison Consommation Mesurée vs Ajustée**")
     fig, ax = plt.subplots(figsize=(10, 5))
     
