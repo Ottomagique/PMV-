@@ -1,4 +1,73 @@
-import streamlit as st
+# Fonction pour détecter automatiquement les colonnes de date et de consommation
+def detecter_colonnes(df):
+    # Initialiser les résultats
+    date_col_guess = None
+    conso_col_guess = None
+    
+    if df is None or df.empty:
+        return date_col_guess, conso_col_guess
+    
+    # 1. Détecter la colonne de date
+    date_keywords = ['date', 'temps', 'période', 'period', 'time', 'jour', 'day', 'mois', 'month', 'année', 'year']
+    
+    # Essayer d'abord de trouver une colonne de type datetime
+    datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+    if datetime_cols:
+        date_col_guess = datetime_cols[0]
+    else:
+        # Chercher par mots-clés dans les noms de colonnes
+        for keyword in date_keywords:
+            potential_cols = [col for col in df.columns if keyword.lower() in col.lower()]
+            if potential_cols:
+                # Essayer de convertir en datetime
+                for col in potential_cols:
+                    try:
+                        pd.to_datetime(df[col])
+                        date_col_guess = col
+                        break
+                    except:
+                        continue
+                if date_col_guess:
+                    break
+    
+    # 2. Détecter la colonne de consommation
+    conso_keywords = ['consommation', 'conso', 'énergie', 'energy', 'kwh', 'mwh', 'wh', 
+                      'électricité', 'electricity', 'gaz', 'gas', 'chaleur', 'heat', 
+                      'puissance', 'power', 'compteur', 'meter']
+    
+    # Exclure la colonne de date si elle a été trouvée
+    cols_to_check = [col for col in df.columns if col != date_col_guess]
+    
+    # Chercher par mots-clés dans les noms de colonnes
+    for keyword in conso_keywords:
+        potential_cols = [col for col in cols_to_check if keyword.lower() in col.lower()]
+        if potential_cols:
+            # Vérifier que ce sont des valeurs numériques
+            for col in potential_cols:
+                try:
+                    if pd.to_numeric(df[col], errors='coerce').notna().sum() > 0.8 * len(df):
+                        conso_col_guess = col
+                        break
+                except:
+                    continue
+            if conso_col_guess:
+                break
+    
+    # Si aucune correspondance par mot-clé, essayer de trouver une colonne numérique
+    if not conso_col_guess:
+        numeric_cols = [col for col in cols_to_check if 
+                        pd.api.types.is_numeric_dtype(df[col]) or 
+                        pd.to_numeric(df[col], errors='coerce').notna().sum() > 0.8 * len(df)]
+        if numeric_cols:
+            # Sélectionner la première colonne numérique non-index qui n'est pas une date
+            for col in numeric_cols:
+                if not (col.lower().startswith('id') or col.lower().startswith('index')):
+                    conso_col_guess = col
+                    break
+            if not conso_col_guess and numeric_cols:
+                conso_col_guess = numeric_cols[0]
+    
+    return date_col_guess, conso_col_guessimport streamlit as st
 import pandas as pd
 import numpy as np
 import io
@@ -255,11 +324,43 @@ st.sidebar.header("🔍 Sélection des données")
 df = None  # Initialisation pour éviter des erreurs
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)  # Chargement du fichier
+    try:
+        df = pd.read_excel(uploaded_file)  # Chargement du fichier
+        
+        # Détecter automatiquement les colonnes de date et de consommation
+        date_col_guess, conso_col_guess = detecter_colonnes(df)
+        
+        # Informer l'utilisateur des colonnes détectées automatiquement
+        if date_col_guess and conso_col_guess:
+            st.success(f"✅ Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
+        elif date_col_guess:
+            st.info(f"ℹ️ Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
+        elif conso_col_guess:
+            st.info(f"ℹ️ Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
+        else:
+            st.warning("⚠️ Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
+    except Exception as e:
+        st.error(f"❌ Erreur lors du chargement du fichier Excel : {e}")
+        df = None
+        date_col_guess = None
+        conso_col_guess = None
+else:
+    df = None
+    date_col_guess = None
+    conso_col_guess = None
 
 # **Définition des colonnes pour la sélection AVANT import**
-date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns if df is not None else [""])
-conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns if df is not None else [""])
+date_col = st.sidebar.selectbox(
+    "📅 Nom de la donnée date", 
+    df.columns if df is not None else [""],
+    index=list(df.columns).index(date_col_guess) if df is not None and date_col_guess in df.columns else 0
+)
+
+conso_col = st.sidebar.selectbox(
+    "⚡ Nom de la donnée consommation", 
+    df.columns if df is not None else [""],
+    index=list(df.columns).index(conso_col_guess) if df is not None and conso_col_guess in df.columns else 0
+)
 
 # **Option pour rechercher automatiquement la meilleure période de 12 mois ou choisir une période**
 period_choice = st.sidebar.radio(
@@ -366,6 +467,9 @@ def evaluer_conformite(r2, cv_rmse):
 # 📌 **Lancement du calcul seulement si le bouton est cliqué**
 if df is not None and lancer_calcul:
     st.subheader("⚙️ Analyse en cours...")
+    
+    # Initialiser la liste all_models ici pour s'assurer qu'elle existe toujours
+    all_models = []
     
     # Convertir la colonne de date si elle ne l'est pas déjà
     if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
