@@ -1,3 +1,15 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import io
+import matplotlib.pyplot as plt
+from itertools import combinations
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import math
+
 # Fonction pour détecter automatiquement les colonnes de date et de consommation
 def detecter_colonnes(df):
     # Initialiser les résultats
@@ -67,17 +79,20 @@ def detecter_colonnes(df):
             if not conso_col_guess and numeric_cols:
                 conso_col_guess = numeric_cols[0]
     
-    return date_col_guess, conso_col_guessimport streamlit as st
-import pandas as pd
-import numpy as np
-import io
-import matplotlib.pyplot as plt
-from itertools import combinations
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-import math
+    return date_col_guess, conso_col_guess
+
+# Fonction pour créer une info-bulle
+def tooltip(text, explanation):
+    return f'<span>{text} <span class="tooltip">ℹ️<span class="tooltiptext">{explanation}</span></span></span>'
+
+# Fonction pour évaluer la conformité IPMVP
+def evaluer_conformite(r2, cv_rmse):
+    if r2 >= 0.75 and cv_rmse <= 0.15:
+        return "Excellente", "good"
+    elif r2 >= 0.5 and cv_rmse <= 0.25:
+        return "Acceptable", "medium"
+    else:
+        return "Insuffisante", "bad"
 
 # 📌 Configuration de la page
 st.set_page_config(
@@ -259,7 +274,6 @@ st.markdown("""
         font-weight: bold;
         margin-left: 8px;
     }
-
     </style>
     """, unsafe_allow_html=True)
 
@@ -347,34 +361,6 @@ else:
 
 # 📂 **Sélection des données (toujours visible même sans fichier importé)**
 st.sidebar.header("🔍 Sélection des données")
-
-df = None  # Initialisation pour éviter des erreurs
-
-if uploaded_file:
-    try:
-        df = pd.read_excel(uploaded_file)  # Chargement du fichier
-        
-        # Détecter automatiquement les colonnes de date et de consommation
-        date_col_guess, conso_col_guess = detecter_colonnes(df)
-        
-        # Informer l'utilisateur des colonnes détectées automatiquement
-        if date_col_guess and conso_col_guess:
-            st.success(f"✅ Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
-        elif date_col_guess:
-            st.info(f"ℹ️ Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
-        elif conso_col_guess:
-            st.info(f"ℹ️ Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
-        else:
-            st.warning("⚠️ Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
-    except Exception as e:
-        st.error(f"❌ Erreur lors du chargement du fichier Excel : {e}")
-        df = None
-        date_col_guess = None
-        conso_col_guess = None
-else:
-    df = None
-    date_col_guess = None
-    conso_col_guess = None
 
 # **Définition des colonnes pour la sélection AVANT import**
 date_col = st.sidebar.selectbox(
@@ -478,18 +464,36 @@ elif model_type == "Polynomiale":
 # Nombre de variables à tester
 max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
-# Fonction pour créer une info-bulle
-def tooltip(text, explanation):
-    return f'<span>{text} <span class="tooltip">ℹ️<span class="tooltiptext">{explanation}</span></span></span>'
+st.sidebar.markdown("---")
 
-# Fonction pour évaluer la conformité IPMVP
-def evaluer_conformite(r2, cv_rmse):
-    if r2 >= 0.75 and cv_rmse <= 0.15:
-        return "Excellente", "good"
-    elif r2 >= 0.5 and cv_rmse <= 0.25:
-        return "Acceptable", "medium"
-    else:
-        return "Insuffisante", "bad"
+# Information sur la conformité IPMVP des modèles avancés
+st.sidebar.markdown(f"""
+### ✅ Conformité IPMVP
+{tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R², CV(RMSE) et biais). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
+
+Les modèles sont évalués selon les critères IPMVP :
+- R² ≥ 0.75 : Excellente corrélation
+- CV(RMSE) ≤ 15% : Excellente précision
+- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible (< 5%) indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs, ce qui est essentiel pour la fiabilité des économies calculées.")} : Ajustement équilibré
+""", unsafe_allow_html=True)
+
+# Information sur les types de régression
+st.sidebar.markdown(f"""
+### 📊 Types de modèles
+- {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé et explicitement mentionné dans l'IPMVP.")}
+- {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Conforme à l'IPMVP tant que les critères de qualité statistique (R², CV) sont respectés et que le modèle reste documentable.")}
+- {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Conforme à l'IPMVP car elle simplifie le modèle tout en maintenant sa précision statistique.")}
+- {tooltip("Régression polynomiale", "Permet de modéliser des relations non linéaires. L'IPMVP accepte les modèles non linéaires si les relations physiques sont plausibles et si les critères statistiques sont respectés.")}
+""", unsafe_allow_html=True)
+
+# Pied de page amélioré
+st.markdown("---")
+st.markdown("""
+<div class="footer-credit">
+    <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
+    <p>Outil d'analyse et de modélisation énergétique conforme IPMVP</p>
+</div>
+""", unsafe_allow_html=True)
 
 # 📌 **Lancement du calcul seulement si le bouton est cliqué**
 if df is not None and lancer_calcul:
@@ -565,7 +569,8 @@ if df is not None and lancer_calcul:
                     
                     try:
                         # Si mode automatique, tester tous les types de modèles
-                        if period_choice == "Rechercher automatiquement la meilleure période de 12 mois" and model_type == "Automatique (meilleur modèle)":
+                        if model_type == "Automatique (meilleur modèle)":
+                            # Tester chaque type de modèle
                             model_types_to_test = [
                                 ("Linéaire", LinearRegression(), "Régression linéaire"),
                                 ("Ridge", Ridge(alpha=1.0), f"Régression Ridge (α=1.0)"),
@@ -757,12 +762,12 @@ if df is not None and lancer_calcul:
         best_r2 = -1
         best_features = []
         best_metrics = {}
-        all_models = []
 
         # 🔹 Test des combinaisons de variables (de 1 à max_features)
         for n in range(1, max_features + 1):
             for combo in combinations(selected_vars, n):
                 X_subset = X[list(combo)]
+                
                 # Si mode automatique, tester tous les types de modèles
                 if model_type == "Automatique (meilleur modèle)":
                     # Créer une liste pour stocker les résultats des différents modèles
@@ -955,7 +960,7 @@ if df is not None and lancer_calcul:
                 <p>{equation}</p>
             </div>
             """, unsafe_allow_html=True)
-        
+            
         with col2:
             # Tableau des métriques avec info-bulles
             st.markdown(f"""
@@ -986,7 +991,7 @@ if df is not None and lancer_calcul:
                 </tr>
             </table>
             """, unsafe_allow_html=True)
-
+        
         # 🔹 Graphique de consommation
         st.subheader("📈 Visualisation des résultats")
         
@@ -1062,7 +1067,7 @@ if df is not None and lancer_calcul:
                         fontsize=12, fontweight='bold', color='#00485F',
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
             st.pyplot(fig3)
-            
+        
         # Ajout d'un expander pour expliquer les différents modèles de régression
         with st.expander("📚 Interprétation des différents modèles de régression"):
             st.markdown("""
@@ -1110,19 +1115,40 @@ if df is not None and lancer_calcul:
             
             Les méthodes avancées (Ridge, Lasso, polynomiale) sont acceptables et peuvent même produire des modèles plus robustes dans certaines situations, tant qu'elles respectent ces critères.
             """)
-
-        
+            
+        # Ajout d'un expander pour expliquer l'interprétation des graphiques
+        with st.expander("📚 Comment interpréter ces graphiques ?"):
+            st.markdown("""
+            ### Interprétation des visualisations
+            
+            **1. Graphique Consommation Mesurée vs Ajustée**
+            - Compare les valeurs réelles (barres bleues) avec les prédictions du modèle (ligne verte)
+            - Un modèle idéal montre une ligne qui suit étroitement les sommets des barres
+            
+            **2. Graphique de dispersion**
+            - Les points doivent s'aligner le long de la ligne diagonale
+            - Des points éloignés de la ligne indiquent des prédictions moins précises
+            - Plus les points sont proches de la diagonale, meilleur est le modèle
+            
+            **3. Analyse des Résidus**
+            - Montre l'erreur pour chaque observation (valeur réelle - valeur prédite)
+            - Idéalement, les résidus devraient:
+              - Être répartis de façon aléatoire autour de zéro
+              - Ne pas présenter de tendance ou de motif visible
+              - Avoir une distribution équilibrée au-dessus et en-dessous de zéro
+            """)
+                
         # 🔹 Tableau des résultats pour tous les modèles testés
         st.subheader("📋 Classement des modèles testés")
         
         # Vérifier que all_models existe et n'est pas vide
-        if 'all_models' in locals() and all_models:
+        if all_models:
             # Trier par R² décroissant
             all_models.sort(key=lambda x: x['r2'], reverse=True)
             
             models_summary = []
             
-            for i, model in enumerate(all_models[:10]):  # Afficher les 10 meilleurs modèles
+            for i, model in enumerate(all_models[:min(10, len(all_models))]):  # Afficher jusqu'à 10 modèles
                 models_summary.append({
                     "Rang": i+1,
                     "Type": model['model_name'],
@@ -1136,47 +1162,5 @@ if df is not None and lancer_calcul:
             st.table(pd.DataFrame(models_summary))
         else:
             st.info("Aucun modèle alternatif disponible pour comparaison.")
-        
     else:
         st.error("⚠️ Aucun modèle valide n'a été trouvé.")
-
-st.sidebar.markdown("---")
-
-# Ajout d'informations sur la méthodologie IPMVP avec infobulles
-st.sidebar.markdown(f"""
-### 📘 Méthodologie IPMVP
-La méthodologie IPMVP évalue la qualité d'un modèle de régression selon ces critères :
-
-- {tooltip("R² ≥ 0.75", "Le coefficient de détermination R² mesure la proportion de la variance expliquée par le modèle. Une valeur de 0.75 signifie que 75% de la variabilité des données est expliquée par le modèle.")} : Excellente corrélation
-- {tooltip("CV(RMSE) ≤ 15%", "Le coefficient de variation de l'erreur quadratique moyenne représente la dispersion relative des résidus. Il est calculé en divisant le RMSE par la moyenne des observations.")} : Excellente précision
-- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs.")} : Ajustement équilibré
-""", unsafe_allow_html=True)
-
-# Information sur les types de régression
-st.sidebar.markdown(f"""
-### 📊 Types de modèles
-- {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé et explicitement mentionné dans l'IPMVP.")}
-- {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Conforme à l'IPMVP tant que les critères de qualité statistique (R², CV) sont respectés et que le modèle reste documentable.")}
-- {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Conforme à l'IPMVP car elle simplifie le modèle tout en maintenant sa précision statistique.")}
-- {tooltip("Régression polynomiale", "Permet de modéliser des relations non linéaires. L'IPMVP accepte les modèles non linéaires si les relations physiques sont plausibles et si les critères statistiques sont respectés.")}
-""", unsafe_allow_html=True)
-
-# Information sur la conformité IPMVP des modèles avancés
-st.sidebar.markdown(f"""
-### ✅ Conformité IPMVP
-{tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R², CV(RMSE) et biais). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
-
-Les modèles sont évalués selon les critères IPMVP :
-- R² ≥ 0.75 : Excellente corrélation
-- CV(RMSE) ≤ 15% : Excellente précision
-- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible (< 5%) indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs, ce qui est essentiel pour la fiabilité des économies calculées.")} : Ajustement équilibré
-""", unsafe_allow_html=True)
-
-# Pied de page amélioré
-st.markdown("---")
-st.markdown("""
-<div class="footer-credit">
-    <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
-    <p>Outil d'analyse et de modélisation énergétique conforme IPMVP</p>
-</div>
-""", unsafe_allow_html=True)
