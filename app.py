@@ -220,10 +220,22 @@ st.markdown("""
             <li>Sélection manuelle : choisissez vous-même la période d'analyse en sélectionnant les dates de début et de fin</li>
         </ul>
     </li>
-    <li><strong>Type de modèle</strong> : Par défaut, l'application teste tous les types de modèles (linéaire, Ridge, Lasso, polynomiale) et sélectionne le meilleur, ou vous pouvez choisir un type spécifique</li>
+    <li><strong>Type de modèle</strong> : 
+        <ul>
+            <li>Option "Automatique" (recommandée) : teste tous les types de modèles et sélectionne celui qui offre le meilleur R²</li>
+            <li>Options spécifiques : vous pouvez choisir manuellement un type de modèle (linéaire, Ridge, Lasso, polynomiale) et ses paramètres</li>
+        </ul>
+    </li>
     <li><strong>Configuration de l'analyse</strong> : Choisissez le nombre maximum de variables à combiner (1 à 4)</li>
     <li><strong>Lancement</strong> : Cliquez sur "Lancer le calcul" pour obtenir le meilleur modèle d'ajustement</li>
-    <li><strong>Analyse des résultats</strong> : Examinez les métriques (R², CV, biais), l'équation d'ajustement et les visualisations générées</li>
+    <li><strong>Analyse des résultats</strong> : 
+        <ul>
+            <li>L'équation d'ajustement montre la relation mathématique entre les variables</li>
+            <li>Les métriques (R², CV(RMSE), biais) permettent d'évaluer la conformité IPMVP</li>
+            <li>Les graphiques visualisent l'ajustement du modèle aux données réelles</li>
+            <li>Le tableau de classement compare tous les modèles testés</li>
+        </ul>
+    </li>
 </ol>
 </div>
 """, unsafe_allow_html=True)
@@ -960,9 +972,10 @@ if df is not None and lancer_calcul:
             Le protocole IPMVP (Option C) n'impose pas une méthode statistique spécifique, mais plutôt des critères de qualité:
             
             1. Le modèle doit avoir un R² ≥ 0.75 et un CV(RMSE) ≤ 15%
-            2. Le modèle doit être documentable et transparent
-            3. Les variables explicatives doivent avoir une relation plausible avec la consommation
-            4. L'erreur-type des coefficients doit être évaluée
+            2. Le biais du modèle doit être inférieur à 5%
+            3. Le modèle doit être documentable et transparent
+            4. Les variables explicatives doivent avoir une relation plausible avec la consommation
+            5. L'erreur-type des coefficients doit être évaluée
             
             Les méthodes avancées (Ridge, Lasso, polynomiale) sont acceptables et peuvent même produire des modèles plus robustes dans certaines situations, tant qu'elles respectent ces critères.
             """)
@@ -1012,11 +1025,12 @@ st.sidebar.markdown(f"""
 # Information sur la conformité IPMVP des modèles avancés
 st.sidebar.markdown(f"""
 ### ✅ Conformité IPMVP
-{tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R² et CV(RMSE)). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
+{tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R², CV(RMSE) et biais). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
 
 Les modèles sont évalués selon les critères IPMVP :
 - R² ≥ 0.75 : Excellente corrélation
 - CV(RMSE) ≤ 15% : Excellente précision
+- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible (< 5%) indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs, ce qui est essentiel pour la fiabilité des économies calculées.")} : Ajustement équilibré
 """, unsafe_allow_html=True)
 
 # Pied de page amélioré
