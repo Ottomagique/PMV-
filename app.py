@@ -12,7 +12,7 @@ import math
 
 # 📌 Configuration de la page
 st.set_page_config(
-    page_title="Analyse IPMVP Simplifiée",
+    page_title=" Analyse IPMVP Simplifiée",
     page_icon="📊",
     layout="wide"
 )
@@ -197,7 +197,7 @@ st.markdown("""
 # 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
 st.markdown("""
-Bienvenue sur **l'Analyse & calcul IPMVP ** 🔍 !  
+Bienvenue sur ** L' Analyse & calcul IPMVP ** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
 """)
 
