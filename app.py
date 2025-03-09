@@ -4,8 +4,7 @@ import numpy as np
 import io
 from itertools import combinations
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score
 
 # 📌 Configuration de la page
 st.set_page_config(
@@ -80,24 +79,14 @@ st.markdown("""
 # 🎯 Interface utilisateur
 st.title("📊 Analyse IPMVP")
 
-st.sidebar.header("⚙️ Configuration")
+# 📂 **Import du fichier et lancement du calcul**
+col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
 
-# 📂 **Sélection des colonnes avant chargement**
-st.sidebar.subheader("1. Sélection des colonnes")
-date_col = st.sidebar.text_input("Nom de la colonne de date", "Date")
-conso_col = st.sidebar.text_input("Nom de la colonne de consommation", "Consommation")
+with col1:
+    uploaded_file = st.file_uploader("📂 Importer un fichier Excel", type=["xlsx", "xls"])
 
-# Sélection des variables explicatives
-var_input = st.sidebar.text_area("Noms des variables explicatives (séparés par une virgule)", "DJU_Base_18, Effectif")
-var_options = [col.strip() for col in var_input.split(",") if col.strip()]
-
-# Sélection du nombre de variables à tester (1 à 4)
-st.sidebar.subheader("2. Choix du modèle")
-max_features = st.sidebar.slider("Nombre de variables à tester", 1, 4, 2)
-
-# 📂 **Chargement des données**
-st.sidebar.subheader("3. Chargement des données")
-uploaded_file = st.sidebar.file_uploader("Fichier Excel de consommation", type=["xlsx", "xls"])
+with col2:
+    lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
 
 # 📌 Lecture du fichier
 @st.cache_data
@@ -110,25 +99,35 @@ def load_data(file):
         return None
 
 df = None
-if uploaded_file is not None:
+if uploaded_file:
     df = load_data(uploaded_file)
 
+# 📌 **Affichage des données après import**
 if df is not None:
-    st.subheader("Données chargées")
+    st.subheader("📊 Données chargées")
     st.dataframe(df.reset_index(drop=True))
 
-    # Vérifier que les colonnes existent
-    if date_col not in df.columns or conso_col not in df.columns:
-        st.error("Les noms de colonnes sélectionnés ne sont pas valides.")
-        st.stop()
+    # 📂 **Sélection des données**
+    st.sidebar.header("🔍 Sélection des données")
 
-    selected_vars = [col for col in var_options if col in df.columns]
+    # 📌 Détection automatique des colonnes
+    default_date_col = next((col for col in df.columns if "date" in col.lower()), None)
+    default_conso_col = next((col for col in df.columns if "conso" in col.lower()), None)
 
-    # Bouton pour lancer le calcul
-    if st.sidebar.button("🚀 Lancer le calcul"):
-        st.subheader("Analyse en cours...")
+    date_col = st.sidebar.selectbox("📅 Nom de la donnée date", df.columns, index=df.columns.get_loc(default_date_col) if default_date_col else 0)
+    conso_col = st.sidebar.selectbox("⚡ Nom de la donnée consommation", df.columns, index=df.columns.get_loc(default_conso_col) if default_conso_col else 1)
 
-        # 🔹 Sélection des colonnes
+    # Variables explicatives
+    var_options = [col for col in df.columns if col not in [date_col, conso_col]]
+    selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
+
+    # Nombre de variables à tester
+    max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
+
+    # 📌 **Lancement du calcul seulement si le bouton est cliqué**
+    if lancer_calcul:
+        st.subheader("⚙️ Analyse en cours...")
+
         X = df[selected_vars] if selected_vars else pd.DataFrame(index=df.index)
         y = df[conso_col]
 
