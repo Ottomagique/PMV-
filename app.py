@@ -106,120 +106,9 @@ def is_admin(username):
     users = init_user_db()
     return username in users and users[username]['is_admin']
 
-# Image SVG d'efficacité énergétique pour la page de connexion
-def get_energy_efficiency_svg():
-    return '''
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
-      <!-- Fond du ciel -->
-      <defs>
-        <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#E7DDD9" />
-          <stop offset="100%" stop-color="#6DBABC" />
-        </linearGradient>
-      </defs>
-      <rect width="800" height="400" fill="url(#skyGradient)" />
-      
-      <!-- Soleil avec rayons énergétiques -->
-      <circle cx="650" cy="100" r="50" fill="#FFD700" />
-      <g opacity="0.7">
-        <path d="M650 30 L650 10" stroke="#FFD700" stroke-width="4" />
-        <path d="M650 190 L650 170" stroke="#FFD700" stroke-width="4" />
-        <path d="M580 100 L560 100" stroke="#FFD700" stroke-width="4" />
-        <path d="M740 100 L720 100" stroke="#FFD700" stroke-width="4" />
-        <path d="M600 50 L580 30" stroke="#FFD700" stroke-width="4" />
-        <path d="M700 150 L720 170" stroke="#FFD700" stroke-width="4" />
-        <path d="M600 150 L580 170" stroke="#FFD700" stroke-width="4" />
-        <path d="M700 50 L720 30" stroke="#FFD700" stroke-width="4" />
-      </g>
-      
-      <!-- Bâtiments modernes et efficaces énergétiquement -->
-      <!-- Tour principale avec panneaux solaires -->
-      <rect x="100" y="120" width="120" height="280" fill="#00485F" rx="5" />
-      <rect x="110" y="140" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="170" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="200" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="230" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="260" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="290" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="320" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="110" y="350" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="100" y="100" width="120" height="20" fill="#96B91D" rx="2" />
-      
-      <!-- Immeuble avec système de végétalisation -->
-      <rect x="250" y="180" width="100" height="220" fill="#00485F" rx="5" />
-      <rect x="260" y="200" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="225" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="250" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="275" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="300" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="325" width="80" height="15" fill="#6DBABC" rx="2" />
-      <rect x="260" y="350" width="80" height="15" fill="#6DBABC" rx="2" />
-      <path d="M250 180 C250 170, 270 160, 300 160 C330 160, 350 170, 350 180" fill="#96B91D" />
-      <path d="M260 160 C280 140, 320 140, 340 160" fill="#96B91D" />
-      
-      <!-- Immeuble de bureaux smart building -->
-      <rect x="380" y="150" width="130" height="250" fill="#00485F" rx="5" />
-      <rect x="395" y="170" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="200" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="230" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="260" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="290" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="320" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="395" y="350" width="100" height="20" fill="#6DBABC" rx="2" />
-      <rect x="380" y="140" width="130" height="10" fill="#96B91D" />
-      <rect x="420" y="110" width="50" height="30" fill="#00485F" rx="5" />
-      
-      <!-- Bâtiment avec design futuriste intelligent -->
-      <path d="M540 400 L540 200 L600 150 L660 200 L660 400 Z" fill="#00485F" />
-      <path d="M550 380 L550 210 L600 170 L650 210 L650 380 Z" fill="#E7DDD9" />
-      <rect x="570" y="220" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="595" y="220" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="620" y="220" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="570" y="260" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="595" y="260" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="620" y="260" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="570" y="300" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="595" y="300" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="620" y="300" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="570" y="340" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="595" y="340" width="15" height="30" fill="#6DBABC" rx="2" />
-      <rect x="620" y="340" width="15" height="30" fill="#6DBABC" rx="2" />
-      
-      <!-- Éléments d'énergie renouvelable -->
-      <!-- Éoliennes -->
-      <line x1="700" y1="400" x2="700" y2="280" stroke="#00485F" stroke-width="8" />
-      <circle cx="700" cy="280" r="5" fill="#E7DDD9" />
-      <path d="M700 280 L730 250" stroke="#6DBABC" stroke-width="4" />
-      <path d="M700 280 L670 250" stroke="#6DBABC" stroke-width="4" />
-      <path d="M700 280 L700 240" stroke="#6DBABC" stroke-width="4" />
-      
-      <!-- Panneaux solaires -->
-      <rect x="40" y="380" width="40" height="20" fill="#00485F" />
-      <rect x="40" y="360" width="40" height="20" fill="#6DBABC" transform="skewX(-15)" />
-      
-      <!-- Symbole d'efficacité énergétique -->
-      <circle cx="445" cy="70" r="30" fill="#96B91D" opacity="0.9" />
-      <path d="M445 50 L445 90 M425 70 L465 70" stroke="white" stroke-width="5" />
-      <path d="M430 55 L460 85 M430 85 L460 55" stroke="white" stroke-width="3" />
-      
-      <!-- Flux de données / énergie entre les bâtiments -->
-      <path d="M220 200 C250 180, 250 220, 280 200" stroke="#96B91D" stroke-width="2" stroke-dasharray="5,3" />
-      <path d="M350 250 C365 230, 365 270, 380 250" stroke="#96B91D" stroke-width="2" stroke-dasharray="5,3" />
-      <path d="M510 230 C525 210, 525 250, 540 230" stroke="#96B91D" stroke-width="2" stroke-dasharray="5,3" />
-      
-      <!-- Symboles d'énergie verte autour des bâtiments -->
-      <circle cx="160" cy="80" r="15" fill="#96B91D" opacity="0.7" />
-      <circle cx="300" cy="140" r="12" fill="#96B91D" opacity="0.7" />
-      <circle cx="445" cy="100" r="10" fill="#96B91D" opacity="0.7" />
-      <circle cx="600" cy="130" r="14" fill="#96B91D" opacity="0.7" />
-      
-      <!-- Titre de l'application -->
-      <text x="400" y="50" font-family="Arial" font-size="30" fill="#00485F" text-anchor="middle" font-weight="bold">Analyse IPMVP</text>
-    </svg>
-    '''
-
-# Fonction pour afficher le formulaire de connexion avec image réaliste
+# Fonction pour afficher le formulaire de connexion avec image réaliste - CORRIGÉE
 def show_login_form():
+    # Définir l'interface utilisateur
     st.markdown("""
     <style>
     /* Style global pour la page de connexion */
@@ -394,6 +283,13 @@ def show_login_form():
             margin-top: 10vh;
         }
     }
+    
+    /* Styles pour le message d'erreur */
+    .stAlert {
+        background: rgba(234, 67, 53, 0.1) !important;
+        color: white !important;
+        border-color: rgba(234, 67, 53, 0.2) !important;
+    }
     </style>
     
     <!-- Image de fond réaliste -->
@@ -415,28 +311,39 @@ def show_login_form():
         <p class="login-subtitle">Outil d'analyse et de modélisation énergétique conforme aux standards</p>
         
         <div class="login-form">
-            <form>
     """, unsafe_allow_html=True)
     
+    # Utiliser la clé "login_status" pour stocker le résultat de la tentative de connexion
+    if "login_status" not in st.session_state:
+        st.session_state.login_status = None
+    
+    # Afficher un message d'erreur si nécessaire
+    if st.session_state.login_status == "failed":
+        st.error("Identifiants incorrects. Veuillez réessayer.")
+    
+    # Créer le formulaire de connexion
     with st.form("login_form"):
         st.markdown('<label for="username" class="login-label">Nom d\'utilisateur</label>', unsafe_allow_html=True)
-        username = st.text_input("", key="username", label_visibility="collapsed")
+        username = st.text_input("", key="username_input", label_visibility="collapsed")
         st.markdown('<label for="password" class="login-label">Mot de passe</label>', unsafe_allow_html=True)
-        password = st.text_input("", type="password", key="password", label_visibility="collapsed")
+        password = st.text_input("", type="password", key="password_input", label_visibility="collapsed")
         
-        submit_button = st.form_submit_button("Se connecter")
+        submitted = st.form_submit_button("Se connecter")
         
-        if submit_button:
+        # Ne traiter la soumission du formulaire que si le bouton est cliqué
+        if submitted:
+            # Vérifier les identifiants
             if check_credentials(username, password):
-                st.session_state['authenticated'] = True
-                st.session_state['username'] = username
-                st.session_state['is_admin'] = is_admin(username)
-                st.rerun()
+                # Si corrects, définir des variables pour les utiliser après le rendu
+                st.session_state.login_successful = True
+                st.session_state.logged_username = username
+                st.session_state.logged_admin = is_admin(username)
             else:
-                st.error("Identifiants incorrects. Veuillez réessayer.")
+                st.session_state.login_status = "failed"
+                st.session_state.login_successful = False
     
+    # Fermer les divs
     st.markdown("""
-            </form>
         </div>
     </div>
     
@@ -444,6 +351,21 @@ def show_login_form():
         <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Après tout le rendu, mettre à jour l'état de session si connexion réussie
+    if st.session_state.get('login_successful', False):
+        st.session_state['authenticated'] = True
+        st.session_state['username'] = st.session_state.logged_username
+        st.session_state['is_admin'] = st.session_state.logged_admin
+        
+        # Nettoyer les variables temporaires
+        del st.session_state['login_successful']
+        del st.session_state['logged_username']
+        del st.session_state['logged_admin']
+        del st.session_state['login_status']
+        
+        # Recharger la page
+        st.rerun()
 
 # Interface d'administration des utilisateurs
 def show_admin_panel():
