@@ -133,7 +133,7 @@ def show_login_form():
     """, unsafe_allow_html=True)
     
     # Rendre le titre et sous-titre séparément pour éviter les problèmes
-    st.markdown('<h1 class="login-title">Analyse IPMVP</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="login-title">CALCUL & ANALYSE IPMVP</h1>', unsafe_allow_html=True)
     st.markdown('<p class="login-subtitle">Outil d\'analyse et de modélisation énergétique conforme aux standards du protocol IPMVP</p>', unsafe_allow_html=True)
     
     # Utiliser la clé "login_status" pour stocker le résultat de la tentative de connexion
