@@ -179,49 +179,57 @@ def show_admin_panel():
     
     st.table(user_data)
     
-    # Formulaire pour ajouter/modifier un utilisateur
-    st.subheader("Ajouter ou modifier un utilisateur")
+    # Diviser l'interface en onglets
+    tab1, tab2 = st.tabs(["Ajouter/Modifier un utilisateur", "Supprimer un utilisateur"])
     
-    with st.form("user_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            username = st.text_input("Nom d'utilisateur*")
-        with col2:
-            password = st.text_input("Mot de passe*", type="password")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            full_name = st.text_input("Nom complet")
-        with col2:
-            email = st.text_input("Email")
-        
-        is_admin = st.checkbox("Administrateur")
-        
-        submit = st.form_submit_button("Enregistrer l'utilisateur")
-        
-        if submit:
-            if not username or not password:
-                st.error("Le nom d'utilisateur et le mot de passe sont obligatoires.")
-            else:
-                update_user(username, password, full_name, email, is_admin)
-                st.success(f"Utilisateur '{username}' enregistré avec succès.")
-                st.rerun()
+    # Onglet 1: Ajouter/Modifier un utilisateur
+    with tab1:
+        with st.form("user_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                username = st.text_input("Nom d'utilisateur*")
+            with col2:
+                password = st.text_input("Mot de passe*", type="password")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                full_name = st.text_input("Nom complet")
+            with col2:
+                email = st.text_input("Email")
+            
+            is_admin = st.checkbox("Administrateur")
+            
+            submit = st.form_submit_button("Enregistrer l'utilisateur", use_container_width=True)
+            
+            if submit:
+                if not username or not password:
+                    st.error("Le nom d'utilisateur et le mot de passe sont obligatoires.")
+                else:
+                    update_user(username, password, full_name, email, is_admin)
+                    st.success(f"Utilisateur '{username}' enregistré avec succès.")
+                    st.rerun()
     
-    # Formulaire pour supprimer un utilisateur
-    st.subheader("Supprimer un utilisateur")
+    # Onglet 2: Supprimer un utilisateur
+    with tab2:
+        with st.form("delete_user_form"):
+            user_to_delete = st.selectbox(
+                "Sélectionner un utilisateur à supprimer",
+                [u for u in users.keys() if u != ADMIN_USERNAME]
+            )
+            
+            delete_submit = st.form_submit_button("Supprimer l'utilisateur", type="primary", use_container_width=True)
+            
+            if delete_submit:
+                if delete_user(user_to_delete):
+                    st.success(f"Utilisateur '{user_to_delete}' supprimé avec succès.")
+                    st.rerun()
+                else:
+                    st.error("Impossible de supprimer cet utilisateur.")
     
-    user_to_delete = st.selectbox(
-        "Sélectionner un utilisateur à supprimer",
-        [u for u in users.keys() if u != ADMIN_USERNAME]
-    )
-    
-    if st.button("Supprimer l'utilisateur", type="primary", use_container_width=True):
-        if delete_user(user_to_delete):
-            st.success(f"Utilisateur '{user_to_delete}' supprimé avec succès.")
-            st.rerun()
-        else:
-            st.error("Impossible de supprimer cet utilisateur.")
-
+    # Bouton pour revenir à l'application principale
+    if st.button("Retour à l'application", use_container_width=True):
+        st.session_state['show_admin'] = False
+        st.rerun()
 # Barre de navigation avec informations utilisateur et déconnexion
 def show_navbar():
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -251,13 +259,11 @@ if 'show_admin' not in st.session_state:
 if not st.session_state['authenticated']:
     show_login_form()
     st.stop()  # Arrête l'exécution du reste de l'application si non authentifié
-else:
-    show_navbar()
-    
-    # Affichage du panneau d'administration si demandé
-    if st.session_state.get('show_admin', False) and st.session_state.get('is_admin', False):
-        show_admin_panel()
-        st.stop()  # Arrête l'exécution de l'application principale quand on est dans l'admin
+
+# Affichage du panneau d'administration si demandé
+if st.session_state.get('show_admin', False) and st.session_state.get('is_admin', False):
+    show_admin_panel()
+    st.stop()  # Arrête l'exécution de l'application principale quand on est dans l'admin
 
 ###################################
 # SYSTÈME D'AUTHENTIFICATION - FIN
@@ -712,7 +718,47 @@ max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
 st.sidebar.markdown("---")
 
+# Ajouter les contrôles d'administration et de profil dans la barre latérale
+if st.session_state['authenticated']:
+    st.sidebar.header("👤 Gestion du compte")
+    st.sidebar.markdown(f"Connecté en tant que: **{st.session_state['username']}**")
+    
+    # Section d'administration (visible uniquement pour les administrateurs)
+    if st.session_state.get('is_admin', False):
+        st.sidebar.markdown("#### 🔐 Administration")
+        if st.sidebar.button("Gérer les utilisateurs", use_container_width=True):
+            st.session_state['show_admin'] = True
+            st.rerun()
+    
+    # Option de changement de mot de passe pour tous les utilisateurs
+    st.sidebar.markdown("#### 🔑 Changer de mot de passe")
+    with st.sidebar.form("change_password_form"):
+        current_password = st.text_input("Mot de passe actuel", type="password")
+        new_password = st.text_input("Nouveau mot de passe", type="password")
+        confirm_password = st.text_input("Confirmer le mot de passe", type="password")
+        submit_password = st.form_submit_button("Modifier le mot de passe", use_container_width=True)
+        
+        if submit_password:
+            # Vérifier l'ancien mot de passe
+            if not check_credentials(st.session_state['username'], current_password):
+                st.sidebar.error("Mot de passe actuel incorrect.")
+            elif new_password != confirm_password:
+                st.sidebar.error("Les nouveaux mots de passe ne correspondent pas.")
+            elif not new_password:
+                st.sidebar.error("Le nouveau mot de passe ne peut pas être vide.")
+            else:
+                # Mettre à jour le mot de passe
+                update_user(st.session_state['username'], new_password)
+                st.sidebar.success("Mot de passe modifié avec succès!")
+    
+    # Bouton de déconnexion
+    if st.sidebar.button("Déconnexion", key="sidebar_logout", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
 # Information sur la conformité IPMVP des modèles avancés
+st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
 ### ✅ Conformité IPMVP
 {tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R², CV(RMSE) et biais). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
