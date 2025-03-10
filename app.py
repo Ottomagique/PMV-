@@ -9,6 +9,259 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import math
+import hashlib
+import pickle
+import os
+from datetime import datetime, timedelta
+
+# 📌 Configuration de la page
+st.set_page_config(
+    page_title="Analyse IPMVP Simplifiée",
+    page_icon="📊",
+    layout="wide"
+)
+
+#####################################
+# SYSTÈME D'AUTHENTIFICATION - DÉBUT
+#####################################
+
+# Configuration de la gestion des utilisateurs
+USER_DB_FILE = 'users_db.pkl'  # Fichier de stockage des utilisateurs
+ADMIN_USERNAME = 'admin'  # Username de l'administrateur par défaut
+ADMIN_PASSWORD = 'admin'  # Mot de passe de l'administrateur par défaut (à changer !)
+
+# Fonction pour hacher les mots de passe
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Fonction pour initialiser la base de données des utilisateurs
+def init_user_db():
+    if not os.path.exists(USER_DB_FILE):
+        users = {
+            ADMIN_USERNAME: {
+                'password': hash_password(ADMIN_PASSWORD),
+                'full_name': 'Administrateur',
+                'email': 'admin@example.com',
+                'created_at': datetime.now(),
+                'is_admin': True
+            }
+        }
+        with open(USER_DB_FILE, 'wb') as f:
+            pickle.dump(users, f)
+        return users
+    else:
+        with open(USER_DB_FILE, 'rb') as f:
+            return pickle.load(f)
+
+# Fonction pour sauvegarder la base de données des utilisateurs
+def save_user_db(users):
+    with open(USER_DB_FILE, 'wb') as f:
+        pickle.dump(users, f)
+
+# Fonction pour ajouter ou modifier un utilisateur
+def update_user(username, password=None, full_name=None, email=None, is_admin=False):
+    users = init_user_db()
+    
+    if username in users:
+        # Mise à jour d'un utilisateur existant
+        if password:
+            users[username]['password'] = hash_password(password)
+        if full_name:
+            users[username]['full_name'] = full_name
+        if email:
+            users[username]['email'] = email
+        users[username]['is_admin'] = is_admin
+    else:
+        # Création d'un nouvel utilisateur
+        users[username] = {
+            'password': hash_password(password) if password else '',
+            'full_name': full_name or username,
+            'email': email or '',
+            'created_at': datetime.now(),
+            'is_admin': is_admin
+        }
+    
+    save_user_db(users)
+    return True
+
+# Fonction pour supprimer un utilisateur
+def delete_user(username):
+    users = init_user_db()
+    if username in users and username != ADMIN_USERNAME:  # Empêcher la suppression de l'admin
+        del users[username]
+        save_user_db(users)
+        return True
+    return False
+
+# Fonction pour vérifier les identifiants
+def check_credentials(username, password):
+    users = init_user_db()
+    if username in users and users[username]['password'] == hash_password(password):
+        return True
+    return False
+
+# Fonction pour vérifier si un utilisateur est admin
+def is_admin(username):
+    users = init_user_db()
+    return username in users and users[username]['is_admin']
+
+# Fonction pour afficher le formulaire de connexion
+def show_login_form():
+    st.markdown("""
+    <style>
+    .login-container {
+        max-width: 450px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: #E7DDD9;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 1px solid #00485F;
+    }
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .login-footer {
+        text-align: center;
+        margin-top: 2rem;
+        font-size: 0.8rem;
+    }
+    </style>
+    
+    <div class="login-container">
+        <div class="login-header">
+            <h2 style="color: #00485F;">Calcul IPMVP</h2>
+            <p>Veuillez vous connecter pour accéder à l'application</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("login_form"):
+        username = st.text_input("Nom d'utilisateur")
+        password = st.text_input("Mot de passe", type="password")
+        submit = st.form_submit_button("Se connecter", use_container_width=True)
+        
+        if submit:
+            if check_credentials(username, password):
+                st.session_state['authenticated'] = True
+                st.session_state['username'] = username
+                st.session_state['is_admin'] = is_admin(username)
+                st.rerun()
+            else:
+                st.error("Identifiants incorrects. Veuillez réessayer.")
+    
+    st.markdown("""
+    <div class="login-footer">
+        <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
+        <p>Outil d'analyse et de modélisation énergétique conforme IPMVP</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Interface d'administration des utilisateurs
+def show_admin_panel():
+    st.header("Administration des utilisateurs")
+    
+    users = init_user_db()
+    
+    # Afficher la liste des utilisateurs
+    st.subheader("Utilisateurs existants")
+    
+    user_data = []
+    for username, data in users.items():
+        user_data.append({
+            "Nom d'utilisateur": username,
+            "Nom complet": data.get('full_name', ''),
+            "Email": data.get('email', ''),
+            "Date de création": data.get('created_at', '').strftime('%d/%m/%Y') if 'created_at' in data else '',
+            "Admin": "✅" if data.get('is_admin', False) else "❌"
+        })
+    
+    st.table(user_data)
+    
+    # Formulaire pour ajouter/modifier un utilisateur
+    st.subheader("Ajouter ou modifier un utilisateur")
+    
+    with st.form("user_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            username = st.text_input("Nom d'utilisateur*")
+        with col2:
+            password = st.text_input("Mot de passe*", type="password")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            full_name = st.text_input("Nom complet")
+        with col2:
+            email = st.text_input("Email")
+        
+        is_admin = st.checkbox("Administrateur")
+        
+        submit = st.form_submit_button("Enregistrer l'utilisateur")
+        
+        if submit:
+            if not username or not password:
+                st.error("Le nom d'utilisateur et le mot de passe sont obligatoires.")
+            else:
+                update_user(username, password, full_name, email, is_admin)
+                st.success(f"Utilisateur '{username}' enregistré avec succès.")
+                st.rerun()
+    
+    # Formulaire pour supprimer un utilisateur
+    st.subheader("Supprimer un utilisateur")
+    
+    user_to_delete = st.selectbox(
+        "Sélectionner un utilisateur à supprimer",
+        [u for u in users.keys() if u != ADMIN_USERNAME]
+    )
+    
+    if st.button("Supprimer l'utilisateur", type="primary", use_container_width=True):
+        if delete_user(user_to_delete):
+            st.success(f"Utilisateur '{user_to_delete}' supprimé avec succès.")
+            st.rerun()
+        else:
+            st.error("Impossible de supprimer cet utilisateur.")
+
+# Barre de navigation avec informations utilisateur et déconnexion
+def show_navbar():
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        st.markdown(f"<div style='padding: 10px 0;'>Connecté en tant que: <b>{st.session_state['username']}</b></div>", unsafe_allow_html=True)
+    
+    with col2:
+        if st.session_state.get('is_admin', False):
+            if st.button("Administration", key="admin_button", use_container_width=True):
+                st.session_state['show_admin'] = not st.session_state.get('show_admin', False)
+                st.rerun()
+    
+    with col3:
+        if st.button("Déconnexion", key="logout_button", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+# Initialisation des variables de session
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+if 'show_admin' not in st.session_state:
+    st.session_state['show_admin'] = False
+
+# Vérification de l'authentification
+if not st.session_state['authenticated']:
+    show_login_form()
+    st.stop()  # Arrête l'exécution du reste de l'application si non authentifié
+else:
+    show_navbar()
+    
+    # Affichage du panneau d'administration si demandé
+    if st.session_state.get('show_admin', False) and st.session_state.get('is_admin', False):
+        show_admin_panel()
+        st.stop()  # Arrête l'exécution de l'application principale quand on est dans l'admin
+
+###################################
+# SYSTÈME D'AUTHENTIFICATION - FIN
+###################################
 
 # Fonction pour détecter automatiquement les colonnes de date et de consommation
 def detecter_colonnes(df):
@@ -93,13 +346,6 @@ def evaluer_conformite(r2, cv_rmse):
         return "Acceptable", "medium"
     else:
         return "Insuffisante", "bad"
-
-# 📌 Configuration de la page
-st.set_page_config(
-    page_title="Analyse IPMVP Simplifiée",
-    page_icon="📊",
-    layout="wide"
-)
 
 # 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
@@ -280,7 +526,7 @@ st.markdown("""
 # 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
 st.markdown("""
-Bienvenue sur ** L 'Analyse et Calcul IPMVP ** 🔍 !  
+Bienvenue sur **l'Analyse IPMVP Professionnelle** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
 """)
 
