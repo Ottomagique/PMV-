@@ -532,7 +532,7 @@ st.markdown("""
 # 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
 st.markdown("""
-Bienvenue sur **l'Analyse IPMVP Professionnelle** 🔍 !  
+Bienvenue sur **l'Analyse & Calcul IPMVP ** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
 """)
 
