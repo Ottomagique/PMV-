@@ -106,190 +106,14 @@ def is_admin(username):
     users = init_user_db()
     return username in users and users[username]['is_admin']
 
-# Fonction pour afficher le formulaire de connexion avec image réaliste - CORRIGÉE
+# Voici la modification à apporter à la fonction show_login_form()
+# Remplacez la partie problématique par cette version corrigée :
+
 def show_login_form():
-    # Définir l'interface utilisateur
+    # Définir l'interface utilisateur avec les styles
     st.markdown("""
     <style>
-    /* Style global pour la page de connexion */
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: 'Manrope', sans-serif;
-    }
-    
-    /* Masquer les éléments Streamlit par défaut sur cette page */
-    #MainMenu, header, footer {
-        visibility: hidden;
-    }
-    
-    .reportview-container {
-        padding: 0;
-        margin: 0;
-    }
-    
-    .main .block-container {
-        padding: 0;
-        margin: 0;
-        max-width: 100%;
-    }
-    
-    /* Style du conteneur principal avec image de fond réaliste */
-    .login-background {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-image: url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
-        background-size: cover;
-        background-position: center;
-        z-index: -1;
-    }
-    
-    /* Overlay sombre pour améliorer la lisibilité du texte */
-    .login-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: linear-gradient(135deg, rgba(0, 72, 95, 0.85) 0%, rgba(0, 72, 95, 0.7) 100%);
-        z-index: -1;
-    }
-    
-    /* Style du panneau de connexion en verre */
-    .glass-panel {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 40px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        width: 400px;
-        margin: 0 auto;
-        margin-top: 15vh;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        animation: fadeInUp 1s ease-out forwards;
-    }
-    
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .login-title {
-        font-size: 28px;
-        font-weight: 700;
-        color: white;
-        text-align: center;
-        margin-bottom: 10px;
-        letter-spacing: 0.5px;
-    }
-    
-    .login-subtitle {
-        font-size: 16px;
-        color: rgba(255, 255, 255, 0.8);
-        text-align: center;
-        margin-bottom: 35px;
-        font-weight: 400;
-    }
-    
-    /* Style du formulaire */
-    .login-form label {
-        font-size: 14px;
-        font-weight: 500;
-        color: white;
-        margin-bottom: 8px;
-        display: block;
-        letter-spacing: 0.5px;
-    }
-    
-    .login-input {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        color: white !important;
-        font-size: 15px !important;
-        margin-bottom: 20px !important;
-        box-sizing: border-box !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .login-input:focus {
-        background: rgba(255, 255, 255, 0.15) !important;
-        border: 1px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: 0 0 10px rgba(255, 255, 255, 0.1) !important;
-    }
-    
-    .login-button {
-        width: 100%;
-        background: #96B91D !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
-        cursor: pointer !important;
-        transition: all 0.3s ease !important;
-        margin-top: 10px !important;
-        letter-spacing: 0.5px !important;
-        box-shadow: 0 4px 15px rgba(150, 185, 29, 0.3) !important;
-    }
-    
-    .login-button:hover {
-        background: #ABD01F !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(150, 185, 29, 0.4) !important;
-    }
-    
-    /* Logo et branding */
-    .brand-logo {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    
-    .brand-logo img {
-        height: 60px;
-        width: auto;
-    }
-    
-    /* Pied de page */
-    .glass-footer {
-        position: fixed;
-        bottom: 20px;
-        left: 0;
-        width: 100%;
-        text-align: center;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 14px;
-        z-index: 1;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    @media (max-width: 600px) {
-        .glass-panel {
-            width: 90%;
-            padding: 30px;
-            margin-top: 10vh;
-        }
-    }
-    
-    /* Styles pour le message d'erreur */
-    .stAlert {
-        background: rgba(234, 67, 53, 0.1) !important;
-        color: white !important;
-        border-color: rgba(234, 67, 53, 0.2) !important;
-    }
+    /* Tous vos styles CSS ici... */
     </style>
     
     <!-- Image de fond réaliste -->
@@ -306,12 +130,11 @@ def show_login_form():
                 <path d="M90 15 L90 45" stroke="#6DBABC" stroke-width="3"/>
             </svg>
         </div>
-        
-        <h1 class="login-title">Analyse IPMVP</h1>
-        <p class="login-subtitle">Outil d'analyse et de modélisation énergétique conforme aux standards</p>
-        
-        <div class="login-form">
     """, unsafe_allow_html=True)
+    
+    # Rendre le titre et sous-titre séparément pour éviter les problèmes
+    st.markdown('<h1 class="login-title">Analyse IPMVP</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="login-subtitle">Outil d\'analyse et de modélisation énergétique conforme aux standards</p>', unsafe_allow_html=True)
     
     # Utiliser la clé "login_status" pour stocker le résultat de la tentative de connexion
     if "login_status" not in st.session_state:
@@ -345,7 +168,6 @@ def show_login_form():
     # Fermer les divs
     st.markdown("""
         </div>
-    </div>
     
     <div class="glass-footer">
         <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
