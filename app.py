@@ -218,7 +218,7 @@ def get_energy_efficiency_svg():
     </svg>
     '''
 
-# Fonction pour afficher le formulaire de connexion moderne style Apple
+# Fonction pour afficher le formulaire de connexion avec image réaliste
 def show_login_form():
     st.markdown("""
     <style>
@@ -245,121 +245,38 @@ def show_login_form():
         max-width: 100%;
     }
     
-    /* Style du conteneur principal */
+    /* Style du conteneur principal avec image de fond réaliste */
     .login-background {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: linear-gradient(135deg, #00485F 0%, #1A6E83 25%, #3A92A6 50%, #6DBABC 75%, #96B91D 100%);
+        background-image: url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+        background-size: cover;
+        background-position: center;
         z-index: -1;
-        animation: gradientBG 20s ease infinite;
-        background-size: 400% 400%;
     }
     
-    @keyframes gradientBG {
-        0% {
-            background-position: 0% 50%;
-        }
-        50% {
-            background-position: 100% 50%;
-        }
-        100% {
-            background-position: 0% 50%;
-        }
-    }
-    
-    /* Animation d'éléments flottants futuristes sur le fond */
-    .floating-elements {
-        position: absolute;
+    /* Overlay sombre pour améliorer la lisibilité du texte */
+    .login-overlay {
+        position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, rgba(0, 72, 95, 0.85) 0%, rgba(0, 72, 95, 0.7) 100%);
         z-index: -1;
     }
     
-    .floating-element {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        animation-name: float;
-        animation-timing-function: ease-in-out;
-        animation-iteration-count: infinite;
-        animation-direction: alternate;
-    }
-    
-    .e1 {
-        width: 150px;
-        height: 150px;
-        top: 10%;
-        left: 10%;
-        animation-duration: 20s;
-    }
-    
-    .e2 {
-        width: 100px;
-        height: 100px;
-        top: 50%;
-        right: 15%;
-        animation-duration: 15s;
-    }
-    
-    .e3 {
-        width: 75px;
-        height: 75px;
-        bottom: 20%;
-        left: 20%;
-        animation-duration: 18s;
-    }
-    
-    .e4 {
-        width: 200px;
-        height: 200px;
-        bottom: 10%;
-        right: 10%;
-        animation-duration: 22s;
-    }
-    
-    @keyframes float {
-        0% {
-            transform: translateY(0) translateX(0) rotate(0deg);
-            opacity: 0.3;
-        }
-        50% {
-            transform: translateY(-20px) translateX(20px) rotate(5deg);
-            opacity: 0.6;
-        }
-        100% {
-            transform: translateY(0) translateX(0) rotate(0deg);
-            opacity: 0.3;
-        }
-    }
-    
-    /* Animation des bâtiments efficaces énergétiquement */
-    .city-silhouette {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 25vh;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 240"><path d="M0,240 L0,150 L50,145 L60,130 L80,135 L90,120 L100,125 L110,115 L120,120 L150,115 L160,100 L170,105 L180,90 L210,95 L240,85 L280,90 L300,70 L320,75 L350,65 L370,70 L400,60 L420,65 L450,50 L460,55 L480,45 L500,50 L520,40 L550,45 L580,35 L600,40 L620,30 L650,35 L670,25 L690,30 L710,20 L740,25 L760,15 L780,20 L800,10 L830,15 L850,5 L870,10 L900,0 L920,10 L940,5 L960,15 L980,10 L1000,20 L1020,15 L1040,25 L1060,20 L1080,30 L1100,25 L1120,35 L1140,30 L1160,40 L1180,35 L1200,45 L1200,240 Z" fill="rgba(0, 72, 95, 0.8)"/></svg>');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: bottom;
-        z-index: -1;
-    }
-    
-    /* Style du panneau en verre transparent */
+    /* Style du panneau de connexion en verre */
     .glass-panel {
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 40px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         width: 400px;
         margin: 0 auto;
         margin-top: 15vh;
@@ -383,7 +300,7 @@ def show_login_form():
         font-weight: 700;
         color: white;
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 10px;
         letter-spacing: 0.5px;
     }
     
@@ -452,7 +369,7 @@ def show_login_form():
         margin-bottom: 20px;
     }
     
-    .brand-logo svg {
+    .brand-logo img {
         height: 60px;
         width: auto;
     }
@@ -464,40 +381,10 @@ def show_login_form():
         left: 0;
         width: 100%;
         text-align: center;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.8);
         font-size: 14px;
         z-index: 1;
-    }
-    
-    /* Animation d'énergies renouvelables */
-    .energy-icon {
-        position: absolute;
-        opacity: 0;
-        animation: fadeInOut 3s infinite;
-    }
-    
-    .sun-icon {
-        top: 15%;
-        right: 10%;
-        animation-delay: 0s;
-    }
-    
-    .wind-icon {
-        top: 25%;
-        left: 15%;
-        animation-delay: 1s;
-    }
-    
-    .solar-icon {
-        bottom: 40%;
-        right: 20%;
-        animation-delay: 2s;
-    }
-    
-    @keyframes fadeInOut {
-        0% { opacity: 0; transform: scale(0.8); }
-        50% { opacity: 0.7; transform: scale(1); }
-        100% { opacity: 0; transform: scale(0.8); }
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     
     @media (max-width: 600px) {
@@ -509,49 +396,18 @@ def show_login_form():
     }
     </style>
     
+    <!-- Image de fond réaliste -->
     <div class="login-background"></div>
-    
-    <div class="floating-elements">
-        <div class="floating-element e1"></div>
-        <div class="floating-element e2"></div>
-        <div class="floating-element e3"></div>
-        <div class="floating-element e4"></div>
-    </div>
-    
-    <div class="city-silhouette"></div>
-    
-    <div class="energy-icon sun-icon">
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="5" fill="#FFD700"/>
-            <path d="M12 2V4M12 20V22M4 12H2M6.34 6.34L4.93 4.93M17.66 6.34L19.07 4.93M22 12H20M17.66 17.66L19.07 19.07M6.34 17.66L4.93 19.07" stroke="#FFD700" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-    </div>
-    
-    <div class="energy-icon wind-icon">
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9.59 4.59A2 2 0 1 1 11 8H2M12.59 19.41A2 2 0 1 0 14 16H2M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2" stroke="#90CAF9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </div>
-    
-    <div class="energy-icon solar-icon">
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="7" width="18" height="10" rx="1" fill="#96B91D" opacity="0.8"/>
-            <line x1="6" y1="10" x2="6" y2="14" stroke="white" stroke-width="1"/>
-            <line x1="9" y1="10" x2="9" y2="14" stroke="white" stroke-width="1"/>
-            <line x1="12" y1="10" x2="12" y2="14" stroke="white" stroke-width="1"/>
-            <line x1="15" y1="10" x2="15" y2="14" stroke="white" stroke-width="1"/>
-            <line x1="18" y1="10" x2="18" y2="14" stroke="white" stroke-width="1"/>
-        </svg>
-    </div>
+    <!-- Overlay pour améliorer la lisibilité -->
+    <div class="login-overlay"></div>
     
     <div class="glass-panel">
         <div class="brand-logo">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120">
-                <path d="M20 10 L40 10 L60 30 L40 50 L20 50 Z" fill="#6DBABC" opacity="0.9"/>
-                <path d="M45 10 L65 10 L85 30 L65 50 L45 50 Z" fill="#96B91D" opacity="0.9"/>
-                <path d="M35 20 L50 35 L35 50" stroke="white" stroke-width="2" fill="none"/>
-                <path d="M60 20 L75 35 L60 50" stroke="white" stroke-width="2" fill="none"/>
-                <text x="60" y="65" font-family="Arial" font-size="10" text-anchor="middle" fill="white">IPMVP</text>
+                <rect x="20" y="15" width="80" height="30" rx="5" fill="rgba(255,255,255,0.9)"/>
+                <text x="60" y="37" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle" fill="#00485F">IPMVP</text>
+                <path d="M30 15 L30 45" stroke="#96B91D" stroke-width="3"/>
+                <path d="M90 15 L90 45" stroke="#6DBABC" stroke-width="3"/>
             </svg>
         </div>
         
