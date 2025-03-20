@@ -473,7 +473,32 @@ def evaluer_conformite(r2, cv_rmse):
         return "Acceptable", "medium"
     else:
         return "Insuffisante", "bad"
-    # 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
+
+# Fonction sécurisée pour formater les valeurs numériques (ajoutée pour éviter les erreurs)
+def format_value(value, fmt=".4f", default="N/A"):
+    """
+    Formate une valeur numérique de manière sécurisée.
+    
+    Parameters:
+    value: Valeur à formater
+    fmt (str): Format à appliquer (par défaut ".4f")
+    default (str): Valeur par défaut si la conversion échoue
+    
+    Returns:
+    str: Valeur formatée ou valeur par défaut
+    """
+    if value is None:
+        return default
+    
+    try:
+        if isinstance(value, (int, float)):
+            return f"{value:{fmt}}"
+        elif isinstance(value, dict) and 't_value' in value and isinstance(value['t_value'], (int, float)):
+            return f"{value['t_value']:{fmt}}"
+        return default
+    except:
+        return default
+        # 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -952,7 +977,7 @@ st.sidebar.markdown(f"""
 Les modèles sont évalués selon les critères IPMVP :
 - R² ≥ 0.75 : Excellente corrélation
 - CV(RMSE) ≤ 15% : Excellente précision
-- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle. Un biais faible (< 5%) indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs, ce qui est essentiel pour la fiabilité des économies calculées.")} : Ajustement équilibré
+- {tooltip("Biais < 5%", "Le biais représente l'erreur systématique du modèle en pourcentage. Un biais faible (< 5%) indique que le modèle ne surestime ni ne sous-estime systématiquement les valeurs, ce qui est essentiel pour la fiabilité des économies calculées.")} : Ajustement équilibré
 """, unsafe_allow_html=True)
 
 # Information sur les types de régression
@@ -1491,7 +1516,7 @@ if df is not None and lancer_calcul:
                 for feature in best_features:
                     if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
                         t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        if t_val is not None:
+                        if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
                             t_values.append(abs(t_val))
                 
                 if t_values:
@@ -1533,23 +1558,32 @@ if df is not None and lancer_calcul:
                     
                     # Vérifier si nous avons des statistiques t valides
                     if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        has_valid_t_values = True
-                        t_value = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        p_value = best_metrics['t_stats'][feature].get('p_value', None) if isinstance(best_metrics['t_stats'][feature], dict) else None
-                # Formatage sécurisé de la valeur t
-if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-    formatted_t = f"{t_value:.4f}"
-else:
-    formatted_t = "N/A"
-
-metrics_table += f"""
-<tr>
-    <td>{feature}</td>
-    <td>{coef:.4f}</td>
-    <td>{formatted_t}</td>
-    <td><span class="significance-badge {significance_class}">{significance_label}</span></td>
-</tr>
-"""
+                        t_value = None
+                        if isinstance(best_metrics['t_stats'][feature], dict) and 't_value' in best_metrics['t_stats'][feature]:
+                            t_value = best_metrics['t_stats'][feature]['t_value']
+                        elif not isinstance(best_metrics['t_stats'][feature], dict):
+                            t_value = best_metrics['t_stats'][feature]
+                            
+                        # Formatage sécurisé de la valeur t
+                        if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
+                            has_valid_t_values = True
+                            formatted_t = f"{t_value:.4f}"
+                            significant = abs(t_value) > 2
+                            significance_class = "significant" if significant else "not-significant"
+                            significance_label = "Oui" if significant else "Non"
+                        else:
+                            formatted_t = "N/A"
+                            significance_class = ""
+                            significance_label = "N/A"
+                        
+                        metrics_table += f"""
+                        <tr>
+                            <td>{feature}</td>
+                            <td>{coef:.4f}</td>
+                            <td>{formatted_t}</td>
+                            <td><span class="significance-badge {significance_class}">{significance_label}</span></td>
+                        </tr>
+                        """
                     else:
                         metrics_table += f"""
                         <tr>
@@ -1783,8 +1817,13 @@ metrics_table += f"""
                     t_values = []
                     for feature in model['features']:
                         if (feature in model['t_stats'] and model['t_stats'][feature] is not None):
-                            t_val = model['t_stats'][feature]['t_value'] if isinstance(model['t_stats'][feature], dict) else model['t_stats'][feature]
-                            if t_val is not None:
+                            t_val = None
+                            if isinstance(model['t_stats'][feature], dict) and 't_value' in model['t_stats'][feature]:
+                                t_val = model['t_stats'][feature]['t_value']
+                            elif not isinstance(model['t_stats'][feature], dict):
+                                t_val = model['t_stats'][feature]
+                                
+                            if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
                                 t_values.append(abs(t_val))
                                 
                     if t_values:
