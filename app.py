@@ -461,9 +461,9 @@ def detecter_colonnes(df):
     
     return date_col_guess, conso_col_guess
 
-# Fonction pour créer une info-bulle
+# Fonction pour créer une info-bulle (mise à jour pour décaler les bulles à droite)
 def tooltip(text, explanation):
-    return f'<span>{text} <span class="tooltip">ℹ️<span class="tooltiptext">{explanation}</span></span></span>'
+    return f'<span>{text} <span class="tooltip">ℹ️<span class="tooltiptext tooltip-right">{explanation}</span></span></span>'
 
 # Fonction pour évaluer la conformité IPMVP
 def evaluer_conformite(r2, cv_rmse):
@@ -473,7 +473,7 @@ def evaluer_conformite(r2, cv_rmse):
         return "Acceptable", "medium"
     else:
         return "Insuffisante", "bad"
-# 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
+    # 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -634,6 +634,23 @@ st.markdown("""
     .tooltip:hover .tooltiptext {
         visibility: visible;
         opacity: 1;
+    }
+    
+    /* Style pour les info-bulles à droite */
+    .tooltip-right {
+        left: 100% !important;
+        margin-left: 10px !important;
+        bottom: 0 !important;
+    }
+
+    .tooltip-right::after {
+        top: 50% !important;
+        left: -5px !important;
+        margin-left: 0 !important;
+        margin-top: -5px !important;
+        border-width: 5px !important;
+        border-style: solid !important;
+        border-color: transparent #00485F transparent transparent !important;
     }
     
     .model-badge {
@@ -1466,8 +1483,34 @@ if df is not None and lancer_calcul:
                     <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
                     <td>{best_metrics['bias']:.2f}</td>
                 </tr>
-            </table>
             """
+            
+            # Ajouter les valeurs t de Student au tableau principal des métriques
+            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
+                t_values = []
+                for feature in best_features:
+                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
+                        t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
+                        if t_val is not None:
+                            t_values.append(abs(t_val))
+                
+                if t_values:
+                    avg_t = sum(t_values) / len(t_values)
+                    sig_count = sum(1 for t in t_values if t > 2)
+                    sig_pct = sig_count / len(t_values) * 100
+                    
+                    metrics_table += f"""
+                    <tr>
+                        <td>{tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")}</td>
+                        <td>{avg_t:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("% Var. signif.", "Pourcentage de variables statistiquement significatives (|t| > 2). 100% indique que toutes les variables ont un impact significatif.")}</td>
+                        <td>{sig_pct:.0f}%</td>
+                    </tr>
+                    """
+            
+            metrics_table += "</table>"
             
             # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
             if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
