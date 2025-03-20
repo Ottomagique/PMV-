@@ -1536,20 +1536,20 @@ if df is not None and lancer_calcul:
                         has_valid_t_values = True
                         t_value = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
                         p_value = best_metrics['t_stats'][feature].get('p_value', None) if isinstance(best_metrics['t_stats'][feature], dict) else None
-                        
-                       if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-                          formatted_t = f"{t_value:.4f}"
-                       else:
-                        formatted_t = "N/A"
+                # Formatage sécurisé de la valeur t
+if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
+    formatted_t = f"{t_value:.4f}"
+else:
+    formatted_t = "N/A"
 
-                       metrics_table += f"""
-                       <tr>
-                           <td>{feature}</td>
-                           <td>{coef:.4f}</td>
-                           <td>{formatted_t}</td>
-                           <td><span class="significance-badge {significance_class}">{significance_label}</span></td>
-                       </tr>
-                        """
+metrics_table += f"""
+<tr>
+    <td>{feature}</td>
+    <td>{coef:.4f}</td>
+    <td>{formatted_t}</td>
+    <td><span class="significance-badge {significance_class}">{significance_label}</span></td>
+</tr>
+"""
                     else:
                         metrics_table += f"""
                         <tr>
