@@ -794,7 +794,7 @@ with col1:
 
 with col2:
     lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
-# Traitement du fichier importé
+ # Traitement du fichier importé
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)  # Chargement du fichier
@@ -962,4 +962,5 @@ if st.session_state['authenticated']:
                 st.sidebar.success("Mot de passe modifié avec succès!")
     
     # Bouton de déconnexion
-    if st.sidebar.button("Déconnexion", key="sidebar_
+    if st.sidebar.button("Déconnexion", key="sidebar_logout", use_container_width=True):
+        for key in list   
