@@ -1304,31 +1304,36 @@ if df is not None and lancer_calcul:
                     ]
                     
                     for m_type, m_obj, m_name in model_types_to_test:
-                        try:
-                            m_obj.fit(X_subset, y)
-                            y_pred = m_obj.predict(X_subset)
-                            
-                            # Calcul des métriques
-                            r2 = r2_score(y, y_pred)
-                            rmse = np.sqrt(mean_squared_error(y, y_pred))
-                            mae = mean_absolute_error(y, y_pred)
-                            cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                            bias = np.mean(y_pred - y) / np.mean(y) * 100
-                            
-                            # Récupération des coefficients selon le type de modèle
-if m_type == "Linéaire":
-    coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-    intercept = m_obj.intercept_
-elif m_type in ["Ridge", "Lasso"]:
-    coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-    intercept = m_obj.intercept_
-elif m_type == "Polynomiale":
-    # Pour le modèle polynomial, nous prenons une représentation simplifiée
-    linear_model = m_obj.named_steps['linear']
-    poly = m_obj.named_steps['poly']
-    feature_names = poly.get_feature_names_out(input_features=combo)
-    coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
-    intercept = linear_model.intercept_
+                      try:
+    m_obj.fit(X_subset, y)
+    y_pred = m_obj.predict(X_subset)
+    
+    # Calcul des métriques
+    r2 = r2_score(y, y_pred)
+    rmse = np.sqrt(mean_squared_error(y, y_pred))
+    mae = mean_absolute_error(y, y_pred)
+    cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
+    bias = np.mean(y_pred - y) / np.mean(y) * 100
+    
+    # Récupération des coefficients selon le type de modèle
+    if m_type == "Linéaire":
+        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+        intercept = m_obj.intercept_
+    elif m_type in ["Ridge", "Lasso"]:
+        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
+        intercept = m_obj.intercept_
+    elif m_type == "Polynomiale":
+        # Pour le modèle polynomial, nous prenons une représentation simplifiée
+        linear_model = m_obj.named_steps['linear']
+        poly = m_obj.named_steps['poly']
+        feature_names = poly.get_feature_names_out(input_features=combo)
+        coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
+        intercept = linear_model.intercept_
+    
+    # Le reste du code dans le bloc try...
+except Exception as e:
+    # Gestion des erreurs
+    continue
                             
                             # Calcul des valeurs t de Student
                             t_stats = calculate_t_stats(X_subset, y, m_obj, coefs) if m_type in ["Linéaire", "Ridge", "Lasso"] else {feature: None for feature in combo}
