@@ -781,7 +781,7 @@ st.markdown("""
 <div class="instruction-card">
 <h3>🛠️ Guide d'utilisation</h3>
 <ol>
-    <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
+    <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, DJF, etc.)</li>
     <li><strong>Format des données</strong> : 
         <ul>
             <li>Utilisez des points (et non des virgules) pour les valeurs décimales</li>
