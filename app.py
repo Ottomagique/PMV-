@@ -761,12 +761,12 @@ st.markdown("""
     .example-table tr:nth-child(even) {
         background-color: #f9f9f9;
     }
-# 📌 **Description de l'application**
+# Description de l'application
 st.title("Calcul IPMVP")
 st.markdown("Bienvenue sur **l'Analyse & Calcul IPMVP** !")
 st.markdown("Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.")
 
-st.markdown("""
+instruction_card_html = """
 <div class="instruction-card">
 <h3>Guide d'utilisation</h3>
 <ol>
@@ -803,9 +803,14 @@ st.markdown("""
     </li>
 </ol>
 </div>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(instruction_card_html, unsafe_allow_html=True)
+
+# Exemple de données à utiliser
+example_data_html = """
 <div class="instruction-card">
-<h3>📊 Format de fichier requis</h3>
+<h3>Format de fichier requis</h3>
 <p>Veuillez préparer votre fichier Excel avec les points suivants à l'esprit :</p>
 
 <ol>
@@ -863,8 +868,8 @@ st.markdown("""
 
 <p><strong>Remarque importante</strong> : Pour une analyse IPMVP complète, il est recommandé d'avoir au moins 12 mois de données.</p>
 </div>
-""", unsafe_allow_html=True)
-
+"""
+st.markdown(example_data_html, unsafe_allow_html=True)
 # 📂 **Import du fichier et lancement du calcul**
 col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
 
