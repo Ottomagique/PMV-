@@ -1017,7 +1017,7 @@ if st.session_state['authenticated']:
             st.session_state['show_admin'] = True
             st.rerun()
     
-    # Option de changement de mot de passe pour tous les utilisateurs
+   # Option de changement de mot de passe pour tous les utilisateurs
     st.sidebar.markdown("#### 🔑 Changer de mot de passe")
     with st.sidebar.form("change_password_form"):
         current_password = st.text_input("Mot de passe actuel", type="password")
@@ -1032,7 +1032,6 @@ if st.session_state['authenticated']:
             elif new_password != confirm_password:
                 st.sidebar.error("Les nouveaux mots de passe ne correspondent pas.")
             elif not new_password:
-                elif not new_password:
                 st.sidebar.error("Le nouveau mot de passe ne peut pas être vide.")
             else:
                 # Mettre à jour le mot de passe
