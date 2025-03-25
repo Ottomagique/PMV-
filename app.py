@@ -752,6 +752,37 @@ st.markdown("""
 <h3>🛠️ Guide d'utilisation</h3>
 <ol>
     <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
+
+    <br/>
+    <p><strong>📋 Format du tableau attendu :</strong></p>
+    <table class="stats-table">
+      <tr>
+        <th>Colonne</th>
+        <th>Description</th>
+        <th>Exemple</th>
+      </tr>
+      <tr>
+        <td><code>Date</code></td>
+        <td>Les dates de consommation</td>
+        <td>2023-01-01</td>
+      </tr>
+      <tr>
+        <td><code>Consommation</code></td>
+        <td>Valeurs de consommation énergétique</td>
+        <td>1520</td>
+      </tr>
+      <tr>
+        <td><code>DJU</code></td>
+        <td>Degrés-jours unifiés ou tout autre indicateur météo</td>
+        <td>5.2</td>
+      </tr>
+      <tr>
+        <td><code>Occupation</code></td>
+        <td>Variables explicatives comme l’occupation, la production, etc.</td>
+        <td>75</td>
+      </tr>
+    </table>
+
     <li><strong>Import du fichier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
     <li><strong>Sélection des données</strong> : Dans le panneau latéral, sélectionnez :
         <ul>
@@ -785,7 +816,6 @@ st.markdown("""
 </ol>
 </div>
 """, unsafe_allow_html=True)
-
 # 📂 **Import du fichier et lancement du calcul**
 col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
 
