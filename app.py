@@ -106,7 +106,6 @@ def check_credentials(username, password):
 def is_admin(username):
     users = init_user_db()
     return username in users and users[username]['is_admin']
-
 def show_login_form():
     # Définir l'interface utilisateur avec les styles
     st.markdown("""
@@ -347,7 +346,7 @@ def calculate_t_stats(X, y, model, coefs):
         # Calcul des p-values
         p_values = [2 * (1 - stats.t.cdf(abs(t), df)) for t in t_stats]
         
-        # Créer un dictionnaire des valeurs t et p-values
+      # Créer un dictionnaire des valeurs t et p-values
         result = {}
         for i, feature in enumerate(X.columns):
             result[feature] = {
@@ -497,7 +496,6 @@ def format_value(value, fmt=".4f", default="N/A"):
         return default
     except:
         return default
-        
 # 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
     <style>
@@ -737,11 +735,46 @@ st.markdown("""
         background-color: #e74c3c;
         color: white;
     }
+    
+    /* Style pour l'exemple de tableau */
+    .example-table {
+        font-family: Arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+        font-size: 14px;
+    }
+    
+    .example-table th {
+        background-color: #00485F;
+        color: white;
+        text-align: left;
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .example-table td {
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .example-table tr:nth-child(even) {
+        background-color: rgba(109, 186, 188, 0.1);
+    }
+    
+    .example-table caption {
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #00485F;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
+st.markdown("""
+Bienvenue sur **l'Analyse & Calcul IPMVP ** 🔍 !  
+Cette
 st.markdown("""
 Bienvenue sur **l'Analyse & Calcul IPMVP ** 🔍 !  
 Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
@@ -752,37 +785,13 @@ st.markdown("""
 <h3>🛠️ Guide d'utilisation</h3>
 <ol>
     <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
-
-    <br/>
-    <p><strong>📋 Format du tableau attendu :</strong></p>
-    <table class="stats-table">
-      <tr>
-        <th>Colonne</th>
-        <th>Description</th>
-        <th>Exemple</th>
-      </tr>
-      <tr>
-        <td><code>Date</code></td>
-        <td>Les dates de consommation</td>
-        <td>2023-01-01</td>
-      </tr>
-      <tr>
-        <td><code>Consommation</code></td>
-        <td>Valeurs de consommation énergétique</td>
-        <td>1520</td>
-      </tr>
-      <tr>
-        <td><code>DJU</code></td>
-        <td>Degrés-jours unifiés ou tout autre indicateur météo</td>
-        <td>5.2</td>
-      </tr>
-      <tr>
-        <td><code>Occupation</code></td>
-        <td>Variables explicatives comme l’occupation, la production, etc.</td>
-        <td>75</td>
-      </tr>
-    </table>
-
+    <li><strong>Format des données</strong> : 
+        <ul>
+            <li>Utilisez des points (et non des virgules) pour les valeurs décimales</li>
+            <li>Évitez les caractères spéciaux dans les noms de colonnes</li>
+            <li>Vérifiez qu'il n'y a pas de cellules vides dans vos données</li>
+        </ul>
+    </li>
     <li><strong>Import du fichier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
     <li><strong>Sélection des données</strong> : Dans le panneau latéral, sélectionnez :
         <ul>
@@ -814,8 +823,50 @@ st.markdown("""
         </ul>
     </li>
 </ol>
+
+<h4>📋 Exemple de structure de données attendue :</h4>
+<table class="example-table">
+    <caption>Exemple de format de tableau à importer</caption>
+    <tr>
+        <th>Date</th>
+        <th>Consommation_kWh</th>
+        <th>DJU_chauffage</th>
+        <th>Occupation</th>
+        <th>Production</th>
+    </tr>
+    <tr>
+        <td>01/01/2023</td>
+        <td>1250.5</td>
+        <td>15.2</td>
+        <td>85</td>
+        <td>750</td>
+    </tr>
+    <tr>
+        <td>01/02/2023</td>
+        <td>1180.3</td>
+        <td>12.8</td>
+        <td>92</td>
+        <td>820</td>
+    </tr>
+    <tr>
+        <td>01/03/2023</td>
+        <td>985.7</td>
+        <td>8.4</td>
+        <td>88</td>
+        <td>780</td>
+    </tr>
+    <tr>
+        <td>01/04/2023</td>
+        <td>875.2</td>
+        <td>5.1</td>
+        <td>90</td>
+        <td>810</td>
+    </tr>
+</table>
+<p><strong>Important :</strong> Utilisez des points (et non des virgules) pour les valeurs décimales. Par exemple, écrivez 1250.5 et non 1250,5.</p>
 </div>
 """, unsafe_allow_html=True)
+
 # 📂 **Import du fichier et lancement du calcul**
 col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
 
@@ -878,7 +929,6 @@ best_period_start = None
 best_period_end = None
 best_period_name = None
 best_period_r2 = -1
-
 # Option de sélection manuelle de période
 if period_choice == "Sélectionner manuellement une période spécifique" and df is not None and date_col in df.columns:
     # Convertir la colonne de date si elle ne l'est pas déjà
@@ -984,6 +1034,8 @@ if st.session_state['authenticated']:
                 st.sidebar.error("Mot de passe actuel incorrect.")
             elif new_password != confirm_password:
                 st.sidebar.error("Les nouveaux mots de passe ne correspondent pas.")
+            elif not new_password:
+                st.sidebar.
             elif not new_password:
                 st.sidebar.error("Le nouveau mot de passe ne peut pas être vide.")
             else:
@@ -1739,7 +1791,7 @@ if df is not None and lancer_calcul:
             4. Les variables explicatives doivent avoir une relation plausible avec la consommation
             5. L'erreur-type des coefficients doit être évaluée
             
-            Les méthodes avancées (Ridge, Lasso, polynomiale) sont acceptables et peuvent même produire des modèles plus robustes dans certaines situations, tant qu'elles respectent ces critères.
+           Les méthodes avancées (Ridge, Lasso, polynomiale) sont acceptables et peuvent même produire des modèles plus robustes dans certaines situations, tant qu'elles respectent ces critères.
             """)
             
         # Ajout d'un expander pour expliquer l'interprétation des graphiques
