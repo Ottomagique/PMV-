@@ -761,12 +761,10 @@ st.markdown("""
     .example-table tr:nth-child(even) {
         background-color: #f9f9f9;
     }
-   # 📌 **Description de l'application**
+# 📌 **Description de l'application**
 st.title("📊 Calcul IPMVP")
-st.markdown("""
-Bienvenue sur **l'Analyse & Calcul IPMVP** 🔍 !  
-Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
-""")
+st.markdown("Bienvenue sur **l'Analyse & Calcul IPMVP** 🔍 !")
+st.markdown("Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.")
 st.markdown("""
 <div class="instruction-card">
 <h3>🛠️ Guide d'utilisation</h3>
