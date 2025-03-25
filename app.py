@@ -1032,8 +1032,7 @@ if st.session_state['authenticated']:
             elif new_password != confirm_password:
                 st.sidebar.error("Les nouveaux mots de passe ne correspondent pas.")
             elif not new_password:
-                st.sidebar.
-            elif not new_password:
+                elif not new_password:
                 st.sidebar.error("Le nouveau mot de passe ne peut pas être vide.")
             else:
                 # Mettre à jour le mot de passe
