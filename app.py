@@ -14,9 +14,9 @@ import pickle
 import os
 from datetime import datetime, timedelta
 import base64
-import scipy.stats as stats
+import scipy.stats as stats  # Ajouté pour les calculs statistiques t-test
 
-# Configuration de la page
+# 📌 Configuration de la page
 st.set_page_config(
     page_title="Analyse IPMVP Simplifiée",
     page_icon="📊",
@@ -498,7 +498,7 @@ def format_value(value, fmt=".4f", default="N/A"):
     except:
         return default
         
-# Appliquer le CSS
+# 🔹 Appliquer le CSS (Uniquement pour améliorer le design)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
@@ -737,41 +737,19 @@ st.markdown("""
         background-color: #e74c3c;
         color: white;
     }
-    
-    /* Style pour le tableau d'exemple */
-    .example-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 15px 0;
-        font-size: 14px;
-    }
-    
-    .example-table th {
-        background-color: #00485F;
-        color: white;
-        padding: 8px 10px;
-        text-align: left;
-    }
-    
-    .example-table td {
-        padding: 6px 10px;
-        border: 1px solid #ccc;
-    }
-    
-    .example-table tr:nth-child(even) {
-        background-color: #f9f9f9;
-    }
     </style>
     """, unsafe_allow_html=True)
-# Description de l'application
-st.title("Calcul IPMVP")
-st.markdown("Bienvenue sur **l'Analyse & Calcul IPMVP** !")
-st.markdown("Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.")
 
-# Guide d'utilisation
+# 📌 **Description de l'application**
+st.title("📊 Calcul IPMVP")
+st.markdown("""
+Bienvenue sur **l'Analyse & Calcul IPMVP ** 🔍 !  
+Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.
+""")
+
 st.markdown("""
 <div class="instruction-card">
-<h3>Guide d'utilisation</h3>
+<h3>🛠️ Guide d'utilisation</h3>
 <ol>
     <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
     <li><strong>Import du fichier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
@@ -808,79 +786,15 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Format de fichier requis - Avec tableau d'exemple
-st.markdown("""
-<div class="instruction-card">
-<h3>Format de fichier requis</h3>
-<p>Veuillez préparer votre fichier Excel avec les points suivants à l'esprit :</p>
-
-<ol>
-    <li><strong>Format des nombres</strong> : Utilisez le <strong>point (.)</strong> comme séparateur décimal et <strong>non la virgule (,)</strong> pour assurer une interprétation correcte des valeurs numériques</li>
-    <li><strong>Colonnes requises</strong> : Votre fichier doit contenir au minimum une colonne de dates, une colonne de consommation et au moins une variable explicative</li>
-    <li><strong>Dates</strong> : Utilisez un format de date standard (JJ/MM/AAAA, AAAA-MM-JJ, etc.)</li>
-    <li><strong>En-têtes de colonnes</strong> : Utilisez des noms explicites pour faciliter l'identification</li>
-</ol>
-
-<h4>Exemple de données :</h4>
-<table class="example-table">
-    <tr>
-        <th>Date</th>
-        <th>Consommation</th>
-        <th>DJU</th>
-        <th>DJF</th>
-        <th>Ensoleillement</th>
-    </tr>
-    <tr>
-        <td>01/01/2024</td>
-        <td>18526.5</td>
-        <td>352.6</td>
-        <td>75.3</td>
-        <td>42.1</td>
-    </tr>
-    <tr>
-        <td>01/02/2024</td>
-        <td>16754.2</td>
-        <td>315.8</td>
-        <td>68.4</td>
-        <td>65.7</td>
-    </tr>
-    <tr>
-        <td>01/03/2024</td>
-        <td>14823.7</td>
-        <td>245.2</td>
-        <td>52.8</td>
-        <td>98.2</td>
-    </tr>
-    <tr>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-    </tr>
-    <tr>
-        <td>01/12/2024</td>
-        <td>17890.3</td>
-        <td>328.4</td>
-        <td>70.2</td>
-        <td>45.2</td>
-    </tr>
-</table>
-
-<p><strong>Remarque importante</strong> : Pour une analyse IPMVP complète, il est recommandé d'avoir au moins 12 mois de données.</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Import du fichier et lancement du calcul
-col1, col2 = st.columns([3, 1])
+# 📂 **Import du fichier et lancement du calcul**
+col1, col2 = st.columns([3, 1])  # Mise en page : Import à gauche, bouton à droite
 
 with col1:
-    uploaded_file = st.file_uploader("Importer un fichier Excel", type=["xlsx", "xls"])
+    uploaded_file = st.file_uploader("📂 Importer un fichier Excel", type=["xlsx", "xls"])
 
 with col2:
-    lancer_calcul = st.button("Lancer le calcul", use_container_width=True)
-
-# Traitement du fichier importé
+    lancer_calcul = st.button("🚀 Lancer le calcul", use_container_width=True)
+    # Traitement du fichier importé
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)  # Chargement du fichier
@@ -890,15 +804,15 @@ if uploaded_file:
         
         # Informer l'utilisateur des colonnes détectées automatiquement
         if date_col_guess and conso_col_guess:
-            st.success(f"Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
+            st.success(f"✅ Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
         elif date_col_guess:
-            st.info(f"Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
+            st.info(f"ℹ️ Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
         elif conso_col_guess:
-            st.info(f"Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
+            st.info(f"ℹ️ Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
         else:
-            st.warning("Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
+            st.warning("⚠️ Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
     except Exception as e:
-        st.error(f"Erreur lors du chargement du fichier Excel : {str(e)}")
+        st.error(f"❌ Erreur lors du chargement du fichier Excel : {str(e)}")
         df = None
         date_col_guess = None
         conso_col_guess = None
@@ -907,25 +821,25 @@ else:
     date_col_guess = None
     conso_col_guess = None
 
-# Sélection des données (toujours visible même sans fichier importé)
-st.sidebar.header("Sélection des données")
+# 📂 **Sélection des données (toujours visible même sans fichier importé)**
+st.sidebar.header("🔍 Sélection des données")
 
-# Définition des colonnes pour la sélection
+# **Définition des colonnes pour la sélection AVANT import**
 date_col = st.sidebar.selectbox(
-    "Nom de la donnée date", 
+    "📅 Nom de la donnée date", 
     df.columns if df is not None else [""],
     index=list(df.columns).index(date_col_guess) if df is not None and date_col_guess in df.columns else 0
 )
 
 conso_col = st.sidebar.selectbox(
-    "Nom de la donnée consommation", 
+    "⚡ Nom de la donnée consommation", 
     df.columns if df is not None else [""],
     index=list(df.columns).index(conso_col_guess) if df is not None and conso_col_guess in df.columns else 0
 )
 
-# Option pour rechercher automatiquement la meilleure période de 12 mois ou choisir une période
+# **Option pour rechercher automatiquement la meilleure période de 12 mois ou choisir une période**
 period_choice = st.sidebar.radio(
-    "Sélection de la période d'analyse",
+    "📅 Sélection de la période d'analyse",
     ["Rechercher automatiquement la meilleure période de 12 mois", "Sélectionner manuellement une période spécifique"]
 )
 
@@ -942,7 +856,7 @@ if period_choice == "Sélectionner manuellement une période spécifique" and df
         try:
             df[date_col] = pd.to_datetime(df[date_col])
         except:
-            st.sidebar.warning("La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
+            st.sidebar.warning("⚠️ La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
     
     if pd.api.types.is_datetime64_any_dtype(df[date_col]):
         # Obtenir les dates minimales et maximales
@@ -973,17 +887,17 @@ if period_choice == "Sélectionner manuellement une période spécifique" and df
         # Recommandation pour 12 mois
         if months_diff != 12:
             if months_diff < 12:
-                st.sidebar.warning(f"La période sélectionnée est de {months_diff} mois. La méthodologie IPMVP recommande 12 mois.")
+                st.sidebar.warning(f"⚠️ La période sélectionnée est de {months_diff} mois. La méthodologie IPMVP recommande 12 mois.")
             else:
-                st.sidebar.warning(f"La période sélectionnée est de {months_diff} mois. Pour une analyse standard IPMVP, 12 mois sont recommandés.")
+                st.sidebar.warning(f"⚠️ La période sélectionnée est de {months_diff} mois. Pour une analyse standard IPMVP, 12 mois sont recommandés.")
 
-# Variables explicatives (seulement après importation du fichier)
+# **Variables explicatives (seulement après importation du fichier)**
 var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
-selected_vars = st.sidebar.multiselect("Variables explicatives", var_options)
+selected_vars = st.sidebar.multiselect("📊 Variables explicatives", var_options)
 
 # Type de modèle à utiliser
 model_type = st.sidebar.selectbox(
-    "Type de modèle de régression",
+    "🧮 Type de modèle de régression",
     ["Automatique (meilleur modèle)", "Linéaire", "Ridge", "Lasso", "Polynomiale"],
     index=0,
     help="Sélectionnez 'Automatique' pour tester tous les types de modèles et choisir le meilleur, ou sélectionnez un type spécifique"
@@ -1010,231 +924,24 @@ elif model_type == "Polynomiale":
     )
 
 # Nombre de variables à tester
-max_features = st.sidebar.slider("Nombre de variables à tester", 1, 4, 2)
+max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
 st.sidebar.markdown("---")
-    <li><strong>Sélection des données</strong> : Dans le panneau latéral, sélectionnez :
-        <ul>
-            <li>La colonne de date</li>
-            <li>La colonne de consommation énergétique</li>
-            <li>Les variables explicatives potentielles (Ensoleillement, DJU, etc.)</li>
-        </ul>
-    </li>
-    <li><strong>Choix de la période d'analyse</strong> : Deux options sont disponibles :
-        <ul>
-            <li>Recherche automatique : l'application trouve la meilleure période de 12 mois dans vos données</li>
-            <li>Sélection manuelle : choisissez vous-même la période d'analyse en sélectionnant les dates de début et de fin</li>
-        </ul>
-    </li>
-    <li><strong>Type de modèle</strong> : 
-        <ul>
-            <li>Option "Automatique" (recommandée) : teste tous les types de modèles et sélectionne celui qui offre le meilleur R²</li>
-            <li>Options spécifiques : vous pouvez choisir manuellement un type de modèle (linéaire, Ridge, Lasso, polynomiale) et ses paramètres</li>
-        </ul>
-    </li>
-    <li><strong>Configuration de l'analyse</strong> : Choisissez le nombre maximum de variables à combiner (1 à 4)</li>
-    <li><strong>Lancement</strong> : Cliquez sur "Lancer le calcul" pour obtenir le meilleur modèle d'ajustement</li>
-    <li><strong>Analyse des résultats</strong> : 
-        <ul>
-            <li>L'équation d'ajustement montre la relation mathématique entre les variables</li>
-            <li>Les métriques (R², CV(RMSE), biais) permettent d'évaluer la conformité IPMVP</li>
-            <li>Les graphiques visualisent l'ajustement du modèle aux données réelles</li>
-            <li>Le tableau de classement compare tous les modèles testés</li>
-        </ul>
-    </li>
-</ol>
-</div>
-""", unsafe_allow_html=True)
 
-# Format de fichier requis - Avec tableau d'exemple
-st.markdown("""
-<div class="instruction-card">
-<h3>Format de fichier requis</h3>
-<p>Veuillez préparer votre fichier Excel avec les points suivants à l'esprit :</p>
-
-<ol>
-    <li><strong>Format des nombres</strong> : Utilisez le <strong>point (.)</strong> comme séparateur décimal et <strong>non la virgule (,)</strong> pour assurer une interprétation correcte des valeurs numériques</li>
-    <li><strong>Colonnes requises</strong> : Votre fichier doit contenir au minimum une colonne de dates, une colonne de consommation et au moins une variable explicative</li>
-    <li><strong>Dates</strong> : Utilisez un format de date standard (JJ/MM/AAAA, AAAA-MM-JJ, etc.)</li>
-    <li><strong>En-têtes de colonnes</strong> : Utilisez des noms explicites pour faciliter l'identification</li>
-</ol>
-
-<h4>Exemple de données :</h4>
-<table class="example-table">
-    <tr>
-        <th>Date</th>
-        <th>Consommation</th>
-        <th>DJU</th>
-        <th>DJF</th>
-        <th>Ensoleillement</th>
-    </tr>
-    <tr>
-        <td>01/01/2024</td>
-        <td>18526.5</td>
-        <td>352.6</td>
-        <td>75.3</td>
-        <td>42.1</td>
-    </tr>
-    <tr>
-        <td>01/02/2024</td>
-        <td>16754.2</td>
-        <td>315.8</td>
-        <td>68.4</td>
-        <td>65.7</td>
-    </tr>
-    <tr>
-        <td>01/03/2024</td>
-        <td>14823.7</td>
-        <td>245.2</td>
-        <td>52.8</td>
-        <td>98.2</td>
-    </tr>
-    <tr>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-        <td>...</td>
-    </tr>
-    <tr>
-        <td>01/12/2024</td>
-        <td>17890.3</td>
-        <td>328.4</td>
-        <td>70.2</td>
-        <td>45.2</td>
-    </tr>
-</table>
-
-<p><strong>Remarque importante</strong> : Pour une analyse IPMVP complète, il est recommandé d'avoir au moins 12 mois de données.</p>
-</div>
-""", unsafe_allow_html=True)
-
-# Import du fichier et lancement du calcul
-col1, col2 = st.columns([3, 1])
-
-with col1:
-    uploaded_file = st.file_uploader("Importer un fichier Excel", type=["xlsx", "xls"])
-
-with col2:
-    lancer_calcul = st.button("Lancer le calcul", use_container_width=True)
-
-# Traitement du fichier importé
-if uploaded_file:
-    try:
-        df = pd.read_excel(uploaded_file)  # Chargement du fichier
-        
-        # Détecter automatiquement les colonnes de date et de consommation
-        date_col_guess, conso_col_guess = detecter_colonnes(df)
-        
-        # Informer l'utilisateur des colonnes détectées automatiquement
-        if date_col_guess and conso_col_guess:
-            st.success(f"Détection automatique : Colonne de date = '{date_col_guess}', Colonne de consommation = '{conso_col_guess}'")
-        elif date_col_guess:
-            st.info(f"Colonne de date détectée : '{date_col_guess}'. Veuillez sélectionner manuellement la colonne de consommation.")
-        elif conso_col_guess:
-            st.info(f"Colonne de consommation détectée : '{conso_col_guess}'. Veuillez sélectionner manuellement la colonne de date.")
-        else:
-            st.warning("Impossible de détecter automatiquement les colonnes date et consommation. Veuillez les sélectionner manuellement.")
-    except Exception as e:
-        st.error(f"Erreur lors du chargement du fichier Excel : {str(e)}")
-        df = None
-        date_col_guess = None
-        conso_col_guess = None
-else:
-    df = None
-    date_col_guess = None
-    conso_col_guess = None
-
-# Sélection des données (toujours visible même sans fichier importé)
-st.sidebar.header("Sélection des données")
-
-# Définition des colonnes pour la sélection
-date_col = st.sidebar.selectbox(
-    "Nom de la donnée date", 
-    df.columns if df is not None else [""],
-    index=list(df.columns).index(date_col_guess) if df is not None and date_col_guess in df.columns else 0
-)
-
-conso_col = st.sidebar.selectbox(
-    "Nom de la donnée consommation", 
-    df.columns if df is not None else [""],
-    index=list(df.columns).index(conso_col_guess) if df is not None and conso_col_guess in df.columns else 0
-)
-
-# Option pour rechercher automatiquement la meilleure période de 12 mois ou choisir une période
-period_choice = st.sidebar.radio(
-    "Sélection de la période d'analyse",
-    ["Rechercher automatiquement la meilleure période de 12 mois", "Sélectionner manuellement une période spécifique"]
-)
-
-# Variables pour stocker les informations de la meilleure période
-best_period_start = None
-best_period_end = None
-best_period_name = None
-best_period_r2 = -1
-
-# Option de sélection manuelle de période
-if period_choice == "Sélectionner manuellement une période spécifique" and df is not None and date_col in df.columns:
-    # Convertir la colonne de date si elle ne l'est pas déjà
-    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
-        try:
-            df[date_col] = pd.to_datetime(df[date_col])
-        except:
-            st.sidebar.warning("La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
-    
-    if pd.api.types.is_datetime64_any_dtype(df[date_col]):
-        # Obtenir les dates minimales et maximales
-        min_date = df[date_col].min().date()
-        max_date = df[date_col].max().date()
-        
-        # Sélection de la date de début et de fin
-        col1, col2 = st.sidebar.columns(2)
-        with col1:
-            start_date = st.date_input("Date de début", 
-                                       value=min_date,
-                                       min_value=min_date, 
-                                       max_value=max_date)
-        with col2:
-            # Calcul de la date par défaut (12 mois après la date de début si possible)
-            default_end = min(max_date, (pd.to_datetime(start_date) + pd.DateOffset(months=11)).date())
-            end_date = st.date_input("Date de fin", 
-                                     value=default_end,
-                                     min_value=start_date, 
-                                     max_value=max_date)
-        
-        # Calculer la différence en mois
-        months_diff = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
-        
-        # Afficher des informations sur la période sélectionnée
-        st.sidebar.info(f"Période sélectionnée: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')} ({months_diff} mois)")
-        
-        # Recommandation pour 12 mois
-        if months_diff != 12:
-            if months_diff < 12:
-                st.sidebar.warning(f"La période sélectionnée est de {months_diff} mois. La méthodologie IPMVP recommande 12 mois.")
-            else:
-                st.sidebar.warning(f"La période sélectionnée est de {months_diff} mois. Pour une analyse standard IPMVP, 12 mois sont recommandés.")
-
-# Variables explicatives (seulement après importation du fichier)
-var_options = [col for col in df.columns if col not in [date_col, conso_col]] if df is not None else []
-selected_vars = st.sidebar.multiselect("Variables explicatives", var_options)
-
-# Type de modèle à utiliser
-model_type = st.sidebar.select
 # Ajouter les contrôles d'administration et de profil dans la barre latérale
 if st.session_state['authenticated']:
-    st.sidebar.header("Gestion du compte")
+    st.sidebar.header("👤 Gestion du compte")
     st.sidebar.markdown(f"Connecté en tant que: **{st.session_state['username']}**")
     
     # Section d'administration (visible uniquement pour les administrateurs)
     if st.session_state.get('is_admin', False):
-        st.sidebar.markdown("#### Administration")
+        st.sidebar.markdown("#### 🔐 Administration")
         if st.sidebar.button("Gérer les utilisateurs", use_container_width=True):
             st.session_state['show_admin'] = True
             st.rerun()
     
     # Option de changement de mot de passe pour tous les utilisateurs
-    st.sidebar.markdown("#### Changer de mot de passe")
+    st.sidebar.markdown("#### 🔑 Changer de mot de passe")
     with st.sidebar.form("change_password_form"):
         current_password = st.text_input("Mot de passe actuel", type="password")
         new_password = st.text_input("Nouveau mot de passe", type="password")
@@ -1263,7 +970,7 @@ if st.session_state['authenticated']:
 # Information sur la conformité IPMVP des modèles avancés
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
-### Conformité IPMVP
+### ✅ Conformité IPMVP
 {tooltip("Modèles avancés et IPMVP", "Le protocole IPMVP ne prescrit pas de méthode statistique spécifique, mais établit des critères de qualité statistique (R², CV(RMSE) et biais). Les méthodes avancées comme Ridge, Lasso ou polynomiale sont acceptables si elles respectent ces critères et si le modèle reste transparent et documentable.")}
 
 Les modèles sont évalués selon les critères IPMVP :
@@ -1274,7 +981,7 @@ Les modèles sont évalués selon les critères IPMVP :
 
 # Information sur les types de régression
 st.sidebar.markdown(f"""
-### Types de modèles
+### 📊 Types de modèles
 - {tooltip("Régression linéaire", "Modèle standard qui établit une relation linéaire entre les variables indépendantes et la consommation. C'est le modèle le plus couramment utilisé et explicitement mentionné dans l'IPMVP.")}
 - {tooltip("Régression Ridge", "Technique de régularisation qui réduit le risque de surapprentissage en pénalisant les coefficients élevés. Conforme à l'IPMVP tant que les critères de qualité statistique (R², CV) sont respectés et que le modèle reste documentable.")}
 - {tooltip("Régression Lasso", "Méthode qui peut réduire certains coefficients à zéro, effectuant ainsi une sélection de variables. Conforme à l'IPMVP car elle simplifie le modèle tout en maintenant sa précision statistique.")}
@@ -1289,9 +996,9 @@ st.markdown("""
     <p>Outil d'analyse et de modélisation énergétique conforme IPMVP</p>
 </div>
 """, unsafe_allow_html=True)
-# Lancement du calcul seulement si le bouton est cliqué
+# 📌 **Lancement du calcul seulement si le bouton est cliqué**
 if df is not None and lancer_calcul:
-    st.subheader("Analyse en cours...")
+    st.subheader("⚙️ Analyse en cours...")
     
     # Initialiser la liste all_models ici pour s'assurer qu'elle existe toujours
     all_models = []
@@ -1303,7 +1010,7 @@ if df is not None and lancer_calcul:
             # Trier le dataframe par date
             df = df.sort_values(by=date_col)
         except:
-            st.error("La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
+            st.error("❌ La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
             st.stop()
     
     # Option 1: Recherche automatique de la meilleure période
@@ -1321,7 +1028,7 @@ if df is not None and lancer_calcul:
             current_date = current_date + pd.DateOffset(months=1)
         
         if not date_ranges:
-            st.error("Pas assez de données pour une analyse sur 12 mois. Assurez-vous d'avoir au moins 12 mois de données.")
+            st.error("❌ Pas assez de données pour une analyse sur 12 mois. Assurez-vous d'avoir au moins 12 mois de données.")
             st.stop()
             
         progress_bar = st.progress(0)
@@ -1385,11 +1092,7 @@ if df is not None and lancer_calcul:
                                     rmse = np.sqrt(mean_squared_error(y, y_pred))
                                     mae = mean_absolute_error(y, y_pred)
                                     cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                                    
-                                    # Calcul du biais avec la valeur réelle (pas en pourcentage)
-                                    bias_raw = np.mean(y_pred - y)
-                                    # Calcul du biais en pourcentage pour l'évaluation
-                                    bias = bias_raw / np.mean(y) * 100 if np.mean(y) != 0 else float('inf')
+                                    bias = np.mean(y_pred - y) / np.mean(y) * 100
                                     
                                     # Récupération des coefficients selon le type de modèle
                                     if m_type == "Linéaire":
@@ -1420,7 +1123,6 @@ if df is not None and lancer_calcul:
                                         'cv_rmse': cv_rmse,
                                         'mae': mae,
                                         'bias': bias,
-                                        'bias_raw': bias_raw,  # Ajout de la valeur brute pour l'affichage
                                         'coefficients': coefs,
                                         'intercept': intercept,
                                         'conformite': conformite,
@@ -1475,11 +1177,7 @@ if df is not None and lancer_calcul:
                             rmse = np.sqrt(mean_squared_error(y, y_pred))
                             mae = mean_absolute_error(y, y_pred)
                             cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                            
-                            # Calcul du biais avec la valeur réelle (pas en pourcentage)
-                            bias_raw = np.mean(y_pred - y)
-                            # Calcul du biais en pourcentage pour l'évaluation
-                            bias = bias_raw / np.mean(y) * 100 if np.mean(y) != 0 else float('inf')
+                            bias = np.mean(y_pred - y) / np.mean(y) * 100
                             
                             # Récupération des coefficients selon le type de modèle
                             if model_type == "Linéaire":
@@ -1510,7 +1208,6 @@ if df is not None and lancer_calcul:
                                 'cv_rmse': cv_rmse,
                                 'mae': mae,
                                 'bias': bias,
-                                'bias_raw': bias_raw,  # Ajout de la valeur brute pour l'affichage
                                 'coefficients': coefs,
                                 'intercept': intercept,
                                 'conformite': conformite,
@@ -1535,6 +1232,7 @@ if df is not None and lancer_calcul:
                                 # Stockage des métriques du meilleur modèle
                                 best_period_metrics = model_info
                     except Exception as e:
+                        # st.warning(f"Erreur lors de l'analyse d'une combinaison : {str(e)}")
                         continue
             
             # Mise à jour de la barre de progression
@@ -1544,7 +1242,7 @@ if df is not None and lancer_calcul:
         progress_text.empty()
         
         if best_period_data is not None:
-            st.success(f"Meilleure période trouvée : {best_period_name}")
+            st.success(f"✅ Meilleure période trouvée : {best_period_name}")
             st.info(f"Période : {best_period_start.strftime('%d/%m/%Y')} - {best_period_end.strftime('%d/%m/%Y')}")
             
             # Utiliser les meilleurs résultats trouvés
@@ -1554,200 +1252,33 @@ if df is not None and lancer_calcul:
             best_metrics = best_period_metrics
             
             # Afficher les détails sur les données
-            st.markdown(f"**Nombre de points de données :** {len(df_filtered)}")
+            st.markdown(f"**📊 Nombre de points de données :** {len(df_filtered)}")
         else:
-            st.error("Aucun modèle valide n'a été trouvé sur les périodes analysées.")
-            st.stop()# Lancement du calcul seulement si le bouton est cliqué
-if df is not None and lancer_calcul:
-    st.subheader("Analyse en cours...")
-    
-    # Initialiser la liste all_models ici pour s'assurer qu'elle existe toujours
-    all_models = []
-    
-    # Convertir la colonne de date si elle ne l'est pas déjà
-    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
-        try:
-            df[date_col] = pd.to_datetime(df[date_col])
-            # Trier le dataframe par date
-            df = df.sort_values(by=date_col)
-        except:
-            st.error("La colonne de date n'a pas pu être convertie. Assurez-vous qu'elle contient des dates valides.")
+            st.error("❌ Aucun modèle valide n'a été trouvé sur les périodes analysées.")
             st.stop()
     
-    # Option 1: Recherche automatique de la meilleure période
-    if period_choice == "Rechercher automatiquement la meilleure période de 12 mois":
-        # Vérifier s'il y a suffisamment de données (au moins 12 mois)
-        date_ranges = []
-        min_date = df[date_col].min()
-        max_date = df[date_col].max()
-        current_date = min_date
-        
-        while current_date + pd.DateOffset(months=11) <= max_date:
-            end_date = current_date + pd.DateOffset(months=11)
-            period_name = f"{current_date.strftime('%b %Y')} - {end_date.strftime('%b %Y')}"
-            date_ranges.append((period_name, current_date, end_date))
-            current_date = current_date + pd.DateOffset(months=1)
-        
-        if not date_ranges:
-            st.error("Pas assez de données pour une analyse sur 12 mois. Assurez-vous d'avoir au moins 12 mois de données.")
-            st.stop()
-            
-        progress_bar = st.progress(0)
-        progress_text = st.empty()
-        
-        best_period_data = None
-        best_period_model = None
-        best_period_features = None
-        best_period_metrics = None
-        best_period_r2 = -1
-        
-        for idx, (period_name, period_start, period_end) in enumerate(date_ranges):
-            progress_text.text(f"Analyse de la période {period_name} ({idx+1}/{len(date_ranges)})")
-            
-            # Filtrer les données pour cette période
-            period_df = df[(df[date_col] >= period_start) & (df[date_col] <= period_end)]
-            
-            # Vérifier que les données sont suffisantes
-            if len(period_df) < 10:  # Éviter les périodes avec trop peu de données
-                continue
-                
-            X = period_df[selected_vars] if selected_vars else pd.DataFrame(index=period_df.index)
-            y = period_df[conso_col]
-            
-            # Nettoyage des données avant entraînement
-            if X.isnull().values.any() or np.isinf(X.values).any():
-                continue
-                
-            if y.isnull().values.any() or np.isinf(y.values).any():
-                continue
-                
-            X = X.apply(pd.to_numeric, errors='coerce').dropna()
-            y = pd.to_numeric(y, errors='coerce').dropna()
-            
-            # Test des combinaisons de variables
-            for n in range(1, max_features + 1):
-                for combo in combinations(selected_vars, n):
-                    X_subset = X[list(combo)]
-                    
-                    try:
-                        # Si mode automatique, tester tous les types de modèles
-                        if model_type == "Automatique (meilleur modèle)":
-                            # Tester chaque type de modèle
-                            model_types_to_test = [
-                                ("Linéaire", LinearRegression(), "Régression linéaire"),
-                                ("Ridge", Ridge(alpha=1.0), f"Régression Ridge (α=1.0)"),
-                                ("Lasso", Lasso(alpha=0.1), f"Régression Lasso (α=0.1)"),
-                                ("Polynomiale", Pipeline([
-                                    ('poly', PolynomialFeatures(degree=2)),
-                                    ('linear', LinearRegression())
-                                ]), f"Régression polynomiale (degré 2)")
-                            ]
-                            
-                            for m_type, m_obj, m_name in model_types_to_test:
-                                try:
-                                    m_obj.fit(X_subset, y)
-                                    y_pred = m_obj.predict(X_subset)
-                                    r2 = r2_score(y, y_pred)
-                                    
-                                    # Calcul des métriques
-                                    rmse = np.sqrt(mean_squared_error(y, y_pred))
-                                    mae = mean_absolute_error(y, y_pred)
-                                    cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                                    
-                                    # Calcul du biais avec la valeur réelle (pas en pourcentage)
-                                    bias_raw = np.mean(y_pred - y)
-                                    # Calcul du biais en pourcentage pour l'évaluation
-                                    bias = bias_raw / np.mean(y) * 100 if np.mean(y) != 0 else float('inf')
-                                    
-                                    # Récupération des coefficients selon le type de modèle
-                                    if m_type == "Linéaire":
-                                        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                                        intercept = m_obj.intercept_
-                                    elif m_type in ["Ridge", "Lasso"]:
-                                        coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
-                                        intercept = m_obj.intercept_
-                                    elif m_type == "Polynomiale":
-                                        # Pour le modèle polynomial, nous gardons une représentation simplifiée
-                                        linear_model = m_obj.named_steps['linear']
-                                        poly = m_obj.named_steps['poly']
-                                        feature_names = poly.get_feature_names_out(input_features=combo)
-                                        coefs = {name: coef for name, coef in zip(feature_names, linear_model.coef_)}
-                                        intercept = linear_model.intercept_
-                                    
-                                    # Calcul des valeurs t de Student
-                                    t_stats = calculate_t_stats(X_subset, y, m_obj, coefs) if m_type in ["Linéaire", "Ridge", "Lasso"] else {feature: None for feature in combo}
-                                    
-                                    # Statut de conformité IPMVP
-                                    conformite, classe = evaluer_conformite(r2, cv_rmse)
-                                    
-                                    # Ajouter le modèle à la liste de tous les modèles testés
-                                    model_info = {
-                                        'features': list(combo),
-                                        'r2': r2,
-                                        'rmse': rmse,
-                                        'cv_rmse': cv_rmse,
-                                        'mae': mae,
-                                        'bias': bias,
-                                        'bias_raw': bias_raw,  # Ajout de la valeur brute pour l'affichage
-                                        'coefficients': coefs,
-                                        'intercept': intercept,
-                                        'conformite': conformite,
-                                        'classe': classe,
-                                        'model_type': m_type,
-                                        'model_name': m_name,
-                                        'period': period_name,
-                                        't_stats': t_stats
-                                    }
-                                    all_models.append(model_info)
-                                    
-                                    # Mettre à jour le meilleur modèle si nécessaire
-                                    if r2 > best_period_r2:
-                                        best_period_r2 = r2
-                                        best_period_start = period_start
-                                        best_period_end = period_end
-                                        best_period_name = period_name
-                                        best_period_data = period_df
-                                        best_period_model = m_obj
-                                        best_period_features = list(combo)
-                                        
-                                        # Stockage des métriques du meilleur modèle
-                                        best_period_metrics = model_info
-                                except Exception as e:
-                                    # Gestion des erreurs
-                                    continue
-                        else:
-                            # Création du modèle selon le type sélectionné
-                            if model_type == "Linéaire":
-                                model = LinearRegression()
-                                model_name = "Régression linéaire"
-                            elif model_type == "Ridge":
-                                model = Ridge(alpha=alpha_ridge)
-                                model_name = f"Régression Ridge (α={alpha_ridge})"
-                            elif model_type == "Lasso":
-                                model = Lasso(alpha=alpha_lasso)
-                                model_name = f"
-                                # Option 2: Période spécifique sélectionnée
+    # Option 2: Période spécifique sélectionnée
     else:
         # Filtrer les données selon la période sélectionnée manuellement
         df_filtered = df[(df[date_col].dt.date >= start_date) & (df[date_col].dt.date <= end_date)]
         
         # Afficher le nombre de points de données
         st.info(f"Analyse sur la période du {start_date.strftime('%d/%m/%Y')} au {end_date.strftime('%d/%m/%Y')}")
-        st.markdown(f"**Nombre de points de données :** {len(df_filtered)}")
+        st.markdown(f"**📊 Nombre de points de données :** {len(df_filtered)}")
         
         if len(df_filtered) < 10:
-            st.warning("Le nombre de points de données est faible pour une analyse statistique fiable.")
+            st.warning("⚠️ Le nombre de points de données est faible pour une analyse statistique fiable.")
         
         X = df_filtered[selected_vars] if selected_vars else pd.DataFrame(index=df_filtered.index)
         y = df_filtered[conso_col]
 
         # Nettoyage des données avant entraînement
         if X.isnull().values.any() or np.isinf(X.values).any():
-            st.error("Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
+            st.error("❌ Les variables explicatives contiennent des valeurs manquantes ou non numériques.")
             st.stop()
 
         if y.isnull().values.any() or np.isinf(y.values).any():
-            st.error("La colonne de consommation contient des valeurs manquantes ou non numériques.")
+            st.error("❌ La colonne de consommation contient des valeurs manquantes ou non numériques.")
             st.stop()
 
         X = X.apply(pd.to_numeric, errors='coerce').dropna()
@@ -1758,7 +1289,7 @@ if df is not None and lancer_calcul:
         best_features = []
         best_metrics = {}
 
-        # Test des combinaisons de variables (de 1 à max_features)
+        # 🔹 Test des combinaisons de variables (de 1 à max_features)
         for n in range(1, max_features + 1):
             for combo in combinations(selected_vars, n):
                 X_subset = X[list(combo)]
@@ -1786,11 +1317,7 @@ if df is not None and lancer_calcul:
                             rmse = np.sqrt(mean_squared_error(y, y_pred))
                             mae = mean_absolute_error(y, y_pred)
                             cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                            
-                            # Calcul du biais avec la valeur réelle (pas en pourcentage)
-                            bias_raw = np.mean(y_pred - y)
-                            # Calcul du biais en pourcentage pour l'évaluation
-                            bias = bias_raw / np.mean(y) * 100 if np.mean(y) != 0 else float('inf')
+                            bias = np.mean(y_pred - y) / np.mean(y) * 100
                             
                             # Récupération des coefficients selon le type de modèle
                             if m_type == "Linéaire":
@@ -1821,7 +1348,6 @@ if df is not None and lancer_calcul:
                                 'cv_rmse': cv_rmse,
                                 'mae': mae,
                                 'bias': bias,
-                                'bias_raw': bias_raw,  # Ajout de la valeur brute pour l'affichage
                                 'coefficients': coefs,
                                 'intercept': intercept,
                                 'conformite': conformite,
@@ -1840,6 +1366,7 @@ if df is not None and lancer_calcul:
                                 best_features = list(combo)
                                 best_metrics = model_info
                         except Exception as e:
+                            # st.warning(f"Erreur lors de l'analyse : {str(e)}")
                             continue
                 else:
                     # Création du modèle selon le type sélectionné
@@ -1870,11 +1397,7 @@ if df is not None and lancer_calcul:
                         rmse = np.sqrt(mean_squared_error(y, y_pred))
                         mae = mean_absolute_error(y, y_pred)
                         cv_rmse = rmse / np.mean(y) if np.mean(y) != 0 else float('inf')
-                        
-                        # Calcul du biais avec la valeur réelle (pas en pourcentage)
-                        bias_raw = np.mean(y_pred - y)
-                        # Calcul du biais en pourcentage pour l'évaluation
-                        bias = bias_raw / np.mean(y) * 100 if np.mean(y) != 0 else float('inf')
+                        bias = np.mean(y_pred - y) / np.mean(y) * 100
                         
                         # Récupération des coefficients selon le type de modèle
                         if model_type == "Linéaire":
@@ -1905,7 +1428,6 @@ if df is not None and lancer_calcul:
                             'cv_rmse': cv_rmse,
                             'mae': mae,
                             'bias': bias,
-                            'bias_raw': bias_raw,  # Ajout de la valeur brute pour l'affichage
                             'coefficients': coefs,
                             'intercept': intercept,
                             'conformite': conformite,
@@ -1924,19 +1446,21 @@ if df is not None and lancer_calcul:
                             best_features = list(combo)
                             best_metrics = model_info
                     except Exception as e:
+                        # st.warning(f"Erreur lors de l'analyse : {str(e)}")
                         continue
-                        # Tri des modèles par R² décroissant
+
+    # 🔹 Tri des modèles par R² décroissant
     all_models.sort(key=lambda x: x['r2'], reverse=True)
 
-    # Résultats du modèle sélectionné
+    # 🔹 Résultats du modèle sélectionné
     if best_model:
-        st.success("Modèle trouvé avec succès !")
+        st.success("✅ Modèle trouvé avec succès !")
         
         # Afficher les métriques dans un tableau
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Résultats du modèle")
+            st.subheader("📊 Résultats du modèle")
             st.markdown(f"""
             <div class="metrics-card">
                 <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
@@ -1983,12 +1507,8 @@ if df is not None and lancer_calcul:
                     <td>{best_metrics['mae']:.4f}</td>
                 </tr>
                 <tr>
-                    <td>{tooltip("Biais brut", "Représente l'erreur systématique brute du modèle. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias_raw']:.2f}</td>
-                </tr>
-                <tr>
                     <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias']:.2f}%</td>
+                    <td>{best_metrics['bias']:.2f}</td>
                 </tr>
             """
             
@@ -2006,7 +1526,7 @@ if df is not None and lancer_calcul:
                     sig_count = sum(1 for t in t_values if t > 2)
                     sig_pct = sig_count / len(t_values) * 100
                     
-                    # Séparation des appels à tooltip et des balises HTML
+                    # CORRECTION: Séparation des appels à tooltip et des balises HTML
                     metrics_table += "<tr><td>"
                     metrics_table += tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")
                     metrics_table += f"</td><td>{avg_t:.2f}</td></tr>"
@@ -2019,7 +1539,7 @@ if df is not None and lancer_calcul:
             
             # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
             if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                # Séparation de la structure HTML et de la fonction tooltip
+                # CORRECTION: Séparation de la structure HTML et de la fonction tooltip
                 metrics_table += "<h4>Coefficients et valeurs t de Student</h4>"
                 metrics_table += "<table class=\"stats-table\">"
                 metrics_table += "<tr><th>Variable</th><th>Coefficient</th><th>"
@@ -2061,15 +1581,15 @@ if df is not None and lancer_calcul:
                 
                 # Ajouter explication sur l'interprétation des valeurs t
                 if has_valid_t_values:
-                    # Séparation de la structure HTML et des appels à tooltip
+                    # CORRECTION: Séparation de la structure HTML et des appels à tooltip
                     metrics_table += "<div style=\"margin-top: 10px; font-size: 0.9em; color: #555;\"><p>"
                     metrics_table += tooltip("Interprétation", "Une variable avec une valeur |t| > 2 est considérée comme statistiquement significative au niveau de confiance de 95%. Les variables non-significatives peuvent être retirées du modèle sans affecter significativement sa qualité.")
                     metrics_table += " Les variables avec une valeur |t| élevée ont un impact plus significatif sur le modèle.</p></div>"
             
             st.markdown(metrics_table, unsafe_allow_html=True)
         
-        # Graphique de consommation
-        st.subheader("Visualisation des résultats")
+        # 🔹 Graphique de consommation
+        st.subheader("📈 Visualisation des résultats")
         
         # Prédictions du modèle
         X_best = df_filtered[best_features]
@@ -2139,881 +1659,13 @@ if df is not None and lancer_calcul:
             ax3.grid(True, linestyle='--', alpha=0.2)
             
             # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3    # Tri des modèles par R² décroissant
-    all_models.sort(key=lambda x: x['r2'], reverse=True)
-
-    # Résultats du modèle sélectionné
-    if best_model:
-        st.success("Modèle trouvé avec succès !")
-        
-        # Afficher les métriques dans un tableau
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Résultats du modèle")
-            st.markdown(f"""
-            <div class="metrics-card">
-                <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
-                <p>Variables utilisées: {', '.join(best_features)}</p>
-                <p>Conformité IPMVP: <span class="conformity-{best_metrics['classe']}">{best_metrics['conformite']}</span></p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Créer l'équation adaptée selon le type de modèle en utilisant la nouvelle fonction
-            if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                equation = format_equation(best_metrics['intercept'], {feature: best_metrics['coefficients'][feature] for feature in best_features})
-            elif best_metrics['model_type'] == "Polynomiale":
-                equation = format_equation(best_metrics['intercept'], best_metrics['coefficients'])
-            
-            st.markdown(f"""
-            <div class="equation-box">
-                <h4>Équation d'ajustement:</h4>
-                <p>{equation}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with col2:
-            # Tableau des métriques amélioré avec info-bulles
-            metrics_table = f"""
-            <table class="stats-table">
-                <tr>
-                    <th>Métrique</th>
-                    <th>Valeur</th>
-                </tr>
-                <tr>
-                    <td>{tooltip("R²", "Coefficient de détermination : mesure la proportion de variance de la variable dépendante qui est prédite à partir des variables indépendantes. Plus cette valeur est proche de 1, meilleur est l'ajustement du modèle aux données.")}</td>
-                    <td>{best_metrics['r2']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("RMSE", "Root Mean Square Error (Erreur quadratique moyenne) : mesure l'écart-type des résidus (erreurs de prédiction). Exprimée dans la même unité que la variable dépendante.")}</td>
-                    <td>{best_metrics['rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("CV(RMSE)", "Coefficient de Variation du RMSE : exprime le RMSE en pourcentage de la moyenne observée, permettant de comparer la précision entre différents modèles indépendamment de l'échelle.")}</td>
-                    <td>{best_metrics['cv_rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("MAE", "Mean Absolute Error (Erreur absolue moyenne) : moyenne des valeurs absolues des erreurs. Moins sensible aux valeurs extrêmes que le RMSE.")}</td>
-                    <td>{best_metrics['mae']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais brut", "Représente l'erreur systématique brute du modèle. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias_raw']:.2f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias']:.2f}%</td>
-                </tr>
-            """
-            
-            # Ajouter les valeurs t de Student au tableau principal des métriques
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                t_values = []
-                for feature in best_features:
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
-                            t_values.append(abs(t_val))
-                
-                if t_values:
-                    avg_t = sum(t_values) / len(t_values)
-                    sig_count = sum(1 for t in t_values if t > 2)
-                    sig_pct = sig_count / len(t_values) * 100
-                    
-                    # Séparation des appels à tooltip et des balises HTML
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")
-                    metrics_table += f"</td><td>{avg_t:.2f}</td></tr>"
-                    
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("% Var. signif.", "Pourcentage de variables statistiquement significatives (|t| > 2). 100% indique que toutes les variables ont un impact significatif.")
-                    metrics_table += f"</td><td>{sig_pct:.0f}%</td></tr>"
-            
-            metrics_table += "</table>"
-            
-            # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                # Séparation de la structure HTML et de la fonction tooltip
-                metrics_table += "<h4>Coefficients et valeurs t de Student</h4>"
-                metrics_table += "<table class=\"stats-table\">"
-                metrics_table += "<tr><th>Variable</th><th>Coefficient</th><th>"
-                metrics_table += tooltip("Valeur t", "La statistique t de Student mesure la significativité d'un coefficient. En général, une valeur |t| > 2 indique une significativité statistique à un niveau de confiance de 95%.")
-                metrics_table += "</th><th>Significatif</th></tr>"
-                
-                # Ajouter chaque variable et sa valeur t
-                has_valid_t_values = False
-                
-                for feature in best_features:
-                    coef = best_metrics['coefficients'][feature]
-                    
-                    # Vérifier si nous avons des statistiques t valides
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_value = None
-                        if isinstance(best_metrics['t_stats'][feature], dict) and 't_value' in best_metrics['t_stats'][feature]:
-                            t_value = best_metrics['t_stats'][feature]['t_value']
-                        elif not isinstance(best_metrics['t_stats'][feature], dict):
-                            t_value = best_metrics['t_stats'][feature]
-                            
-                        # Formatage sécurisé de la valeur t
-                        if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-                            has_valid_t_values = True
-                            formatted_t = f"{t_value:.4f}"
-                            significant = abs(t_value) > 2
-                            significance_class = "significant" if significant else "not-significant"
-                            significance_label = "Oui" if significant else "Non"
-                        else:
-                            formatted_t = "N/A"
-                            significance_class = ""
-                            significance_label = "N/A"
-                        
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>{formatted_t}</td>"
-                        metrics_table += f"<td><span class=\"significance-badge {significance_class}\">{significance_label}</span></td></tr>"
-                    else:
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>N/A</td><td>N/A</td></tr>"
-                
-                metrics_table += "</table>"
-                
-                # Ajouter explication sur l'interprétation des valeurs t
-                if has_valid_t_values:
-                    # Séparation de la structure HTML et des appels à tooltip
-                    metrics_table += "<div style=\"margin-top: 10px; font-size: 0.9em; color: #555;\"><p>"
-                    metrics_table += tooltip("Interprétation", "Une variable avec une valeur |t| > 2 est considérée comme statistiquement significative au niveau de confiance de 95%. Les variables non-significatives peuvent être retirées du modèle sans affecter significativement sa qualité.")
-                    metrics_table += " Les variables avec une valeur |t| élevée ont un impact plus significatif sur le modèle.</p></div>"
-            
-            st.markdown(metrics_table, unsafe_allow_html=True)
-        
-        # Graphique de consommation
-        st.subheader("Visualisation des résultats")
-        
-        # Prédictions du modèle
-        X_best = df_filtered[best_features]
-        y_pred = best_model.predict(X_best)
-        
-        # Configuration du style des graphiques pour correspondre au thème
-        plt.style.use('seaborn-v0_8-whitegrid')
-        plt.rcParams['axes.facecolor'] = '#F5F5F5'
-        plt.rcParams['figure.facecolor'] = '#E7DDD9'
-        plt.rcParams['axes.edgecolor'] = '#00485F'
-        plt.rcParams['axes.labelcolor'] = '#00485F'
-        plt.rcParams['axes.titlecolor'] = '#00485F'
-        plt.rcParams['xtick.color'] = '#0C1D2D'
-        plt.rcParams['ytick.color'] = '#0C1D2D'
-        plt.rcParams['grid.color'] = '#00485F'
-        plt.rcParams['grid.alpha'] = 0.1
-        
-        # Graphique de comparaison
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
-        ax.plot(range(len(y)), y_pred, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Consommation ajustée", zorder=10)
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée", fontweight='bold', fontsize=14)
-        ax.set_xlabel("Observations", fontweight='bold')
-        ax.set_ylabel("Consommation", fontweight='bold')
-        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-        ax.grid(True, linestyle='--', alpha=0.2)
-        # Annotation du R²
-        ax.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                    fontsize=12, fontweight='bold', color='#00485F',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-        st.pyplot(fig)
-        
-        # Création d'une mise en page en colonnes pour les deux derniers graphiques
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Graphique de dispersion (measured vs predicted)
-            fig2, ax2 = plt.subplots(figsize=(8, 7))
-            scatter = ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.8, s=50, edgecolor='#00485F')
-            
-            # Ligne de référence y=x
-            min_val = min(min(y), min(y_pred))
-            max_val = max(max(y), max(y_pred))
-            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=1.5, label="Référence y=x")
-            
-            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
-            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
-            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
-            ax2.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-            ax2.grid(True, linestyle='--', alpha=0.2)
-            # Annotation du CV(RMSE)
-            ax2.annotate(f"CV(RMSE) = {best_metrics['cv_rmse']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-            st.pyplot(fig2)
-        
-        with col2:
-            # Affichage des résidus
-            residus = y - y_pred
-            
-            fig3, ax3 = plt.subplots(figsize=(8, 7))
-            ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=50, edgecolor='#00485F')
-            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.5, linewidth=1.5)
-            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
-            ax3.set_xlabel("Observations", fontweight='bold')
-            ax3.set_ylabel("Résidus", fontweight='bold')
-            ax3.grid(True, linestyle='--', alpha=0.2)
-            
-            # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.    # Tri des modèles par R² décroissant
-    all_models.sort(key=lambda x: x['r2'], reverse=True)
-
-    # Résultats du modèle sélectionné
-    if best_model:
-        st.success("Modèle trouvé avec succès !")
-        
-        # Afficher les métriques dans un tableau
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Résultats du modèle")
-            st.markdown(f"""
-            <div class="metrics-card">
-                <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
-                <p>Variables utilisées: {', '.join(best_features)}</p>
-                <p>Conformité IPMVP: <span class="conformity-{best_metrics['classe']}">{best_metrics['conformite']}</span></p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Créer l'équation adaptée selon le type de modèle en utilisant la nouvelle fonction
-            if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                equation = format_equation(best_metrics['intercept'], {feature: best_metrics['coefficients'][feature] for feature in best_features})
-            elif best_metrics['model_type'] == "Polynomiale":
-                equation = format_equation(best_metrics['intercept'], best_metrics['coefficients'])
-            
-            st.markdown(f"""
-            <div class="equation-box">
-                <h4>Équation d'ajustement:</h4>
-                <p>{equation}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with col2:
-            # Tableau des métriques amélioré avec info-bulles
-            metrics_table = f"""
-            <table class="stats-table">
-                <tr>
-                    <th>Métrique</th>
-                    <th>Valeur</th>
-                </tr>
-                <tr>
-                    <td>{tooltip("R²", "Coefficient de détermination : mesure la proportion de variance de la variable dépendante qui est prédite à partir des variables indépendantes. Plus cette valeur est proche de 1, meilleur est l'ajustement du modèle aux données.")}</td>
-                    <td>{best_metrics['r2']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("RMSE", "Root Mean Square Error (Erreur quadratique moyenne) : mesure l'écart-type des résidus (erreurs de prédiction). Exprimée dans la même unité que la variable dépendante.")}</td>
-                    <td>{best_metrics['rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("CV(RMSE)", "Coefficient de Variation du RMSE : exprime le RMSE en pourcentage de la moyenne observée, permettant de comparer la précision entre différents modèles indépendamment de l'échelle.")}</td>
-                    <td>{best_metrics['cv_rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("MAE", "Mean Absolute Error (Erreur absolue moyenne) : moyenne des valeurs absolues des erreurs. Moins sensible aux valeurs extrêmes que le RMSE.")}</td>
-                    <td>{best_metrics['mae']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais brut", "Représente l'erreur systématique brute du modèle. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias_raw']:.2f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias']:.2f}%</td>
-                </tr>
-            """
-            
-            # Ajouter les valeurs t de Student au tableau principal des métriques
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                t_values = []
-                for feature in best_features:
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
-                            t_values.append(abs(t_val))
-                
-                if t_values:
-                    avg_t = sum(t_values) / len(t_values)
-                    sig_count = sum(1 for t in t_values if t > 2)
-                    sig_pct = sig_count / len(t_values) * 100
-                    
-                    # Séparation des appels à tooltip et des balises HTML
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")
-                    metrics_table += f"</td><td>{avg_t:.2f}</td></tr>"
-                    
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("% Var. signif.", "Pourcentage de variables statistiquement significatives (|t| > 2). 100% indique que toutes les variables ont un impact significatif.")
-                    metrics_table += f"</td><td>{sig_pct:.0f}%</td></tr>"
-            
-            metrics_table += "</table>"
-            
-            # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                # Séparation de la structure HTML et de la fonction tooltip
-                metrics_table += "<h4>Coefficients et valeurs t de Student</h4>"
-                metrics_table += "<table class=\"stats-table\">"
-                metrics_table += "<tr><th>Variable</th><th>Coefficient</th><th>"
-                metrics_table += tooltip("Valeur t", "La statistique t de Student mesure la significativité d'un coefficient. En général, une valeur |t| > 2 indique une significativité statistique à un niveau de confiance de 95%.")
-                metrics_table += "</th><th>Significatif</th></tr>"
-                
-                # Ajouter chaque variable et sa valeur t
-                has_valid_t_values = False
-                
-                for feature in best_features:
-                    coef = best_metrics['coefficients'][feature]
-                    
-                    # Vérifier si nous avons des statistiques t valides
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_value = None
-                        if isinstance(best_metrics['t_stats'][feature], dict) and 't_value' in best_metrics['t_stats'][feature]:
-                            t_value = best_metrics['t_stats'][feature]['t_value']
-                        elif not isinstance(best_metrics['t_stats'][feature], dict):
-                            t_value = best_metrics['t_stats'][feature]
-                            
-                        # Formatage sécurisé de la valeur t
-                        if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-                            has_valid_t_values = True
-                            formatted_t = f"{t_value:.4f}"
-                            significant = abs(t_value) > 2
-                            significance_class = "significant" if significant else "not-significant"
-                            significance_label = "Oui" if significant else "Non"
-                        else:
-                            formatted_t = "N/A"
-                            significance_class = ""
-                            significance_label = "N/A"
-                        
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>{formatted_t}</td>"
-                        metrics_table += f"<td><span class=\"significance-badge {significance_class}\">{significance_label}</span></td></tr>"
-                    else:
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>N/A</td><td>N/A</td></tr>"
-                
-                metrics_table += "</table>"
-                
-                # Ajouter explication sur l'interprétation des valeurs t
-                if has_valid_t_values:
-                    # Séparation de la structure HTML et des appels à tooltip
-                    metrics_table += "<div style=\"margin-top: 10px; font-size: 0.9em; color: #555;\"><p>"
-                    metrics_table += tooltip("Interprétation", "Une variable avec une valeur |t| > 2 est considérée comme statistiquement significative au niveau de confiance de 95%. Les variables non-significatives peuvent être retirées du modèle sans affecter significativement sa qualité.")
-                    metrics_table += " Les variables avec une valeur |t| élevée ont un impact plus significatif sur le modèle.</p></div>"
-            
-            st.markdown(metrics_table, unsafe_allow_html=True)
-        
-        # Graphique de consommation
-        st.subheader("Visualisation des résultats")
-        
-        # Prédictions du modèle
-        X_best = df_filtered[best_features]
-        y_pred = best_model.predict(X_best)
-        
-        # Configuration du style des graphiques pour correspondre au thème
-        plt.style.use('seaborn-v0_8-whitegrid')
-        plt.rcParams['axes.facecolor'] = '#F5F5F5'
-        plt.rcParams['figure.facecolor'] = '#E7DDD9'
-        plt.rcParams['axes.edgecolor'] = '#00485F'
-        plt.rcParams['axes.labelcolor'] = '#00485F'
-        plt.rcParams['axes.titlecolor'] = '#00485F'
-        plt.rcParams['xtick.color'] = '#0C1D2D'
-        plt.rcParams['ytick.color'] = '#0C1D2D'
-        plt.rcParams['grid.color'] = '#00485F'
-        plt.rcParams['grid.alpha'] = 0.1
-        
-        # Graphique de comparaison
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
-        ax.plot(range(len(y)), y_pred, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Consommation ajustée", zorder=10)
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée", fontweight='bold', fontsize=14)
-        ax.set_xlabel("Observations", fontweight='bold')
-        ax.set_ylabel("Consommation", fontweight='bold')
-        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-        ax.grid(True, linestyle='--', alpha=0.2)
-        # Annotation du R²
-        ax.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                    fontsize=12, fontweight='bold', color='#00485F',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-        st.pyplot(fig)
-        
-        # Création d'une mise en page en colonnes pour les deux derniers graphiques
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Graphique de dispersion (measured vs predicted)
-            fig2, ax2 = plt.subplots(figsize=(8, 7))
-            scatter = ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.8, s=50, edgecolor='#00485F')
-            
-            # Ligne de référence y=x
-            min_val = min(min(y), min(y_pred))
-            max_val = max(max(y), max(y_pred))
-            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=1.5, label="Référence y=x")
-            
-            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
-            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
-            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
-            ax2.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-            ax2.grid(True, linestyle='--', alpha=0.2)
-            # Annotation du CV(RMSE)
-            ax2.annotate(f"CV(RMSE) = {best_metrics['cv_rmse']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-            st.pyplot(fig2)
-        
-        with col2:
-            # Affichage des résidus
-            residus = y - y_pred
-            
-            fig3, ax3 = plt.subplots(figsize=(8, 7))
-            ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=50, edgecolor='#00485F')
-            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.5, linewidth=1.5)
-            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
-            ax3.set_xlabel("Observations", fontweight='bold')
-            ax3.set_ylabel("Résidus", fontweight='bold')
-            ax3.grid(True, linestyle='--', alpha=0.2)
-            
-            # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor    # Tri des modèles par R² décroissant
-    all_models.sort(key=lambda x: x['r2'], reverse=True)
-
-    # Résultats du modèle sélectionné
-    if best_model:
-        st.success("Modèle trouvé avec succès !")
-        
-        # Afficher les métriques dans un tableau
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Résultats du modèle")
-            st.markdown(f"""
-            <div class="metrics-card">
-                <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
-                <p>Variables utilisées: {', '.join(best_features)}</p>
-                <p>Conformité IPMVP: <span class="conformity-{best_metrics['classe']}">{best_metrics['conformite']}</span></p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Créer l'équation adaptée selon le type de modèle en utilisant la nouvelle fonction
-            if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                equation = format_equation(best_metrics['intercept'], {feature: best_metrics['coefficients'][feature] for feature in best_features})
-            elif best_metrics['model_type'] == "Polynomiale":
-                equation = format_equation(best_metrics['intercept'], best_metrics['coefficients'])
-            
-            st.markdown(f"""
-            <div class="equation-box">
-                <h4>Équation d'ajustement:</h4>
-                <p>{equation}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with col2:
-            # Tableau des métriques amélioré avec info-bulles
-            metrics_table = f"""
-            <table class="stats-table">
-                <tr>
-                    <th>Métrique</th>
-                    <th>Valeur</th>
-                </tr>
-                <tr>
-                    <td>{tooltip("R²", "Coefficient de détermination : mesure la proportion de variance de la variable dépendante qui est prédite à partir des variables indépendantes. Plus cette valeur est proche de 1, meilleur est l'ajustement du modèle aux données.")}</td>
-                    <td>{best_metrics['r2']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("RMSE", "Root Mean Square Error (Erreur quadratique moyenne) : mesure l'écart-type des résidus (erreurs de prédiction). Exprimée dans la même unité que la variable dépendante.")}</td>
-                    <td>{best_metrics['rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("CV(RMSE)", "Coefficient de Variation du RMSE : exprime le RMSE en pourcentage de la moyenne observée, permettant de comparer la précision entre différents modèles indépendamment de l'échelle.")}</td>
-                    <td>{best_metrics['cv_rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("MAE", "Mean Absolute Error (Erreur absolue moyenne) : moyenne des valeurs absolues des erreurs. Moins sensible aux valeurs extrêmes que le RMSE.")}</td>
-                    <td>{best_metrics['mae']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais brut", "Représente l'erreur systématique brute du modèle. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias_raw']:.2f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias']:.2f}%</td>
-                </tr>
-            """
-            
-            # Ajouter les valeurs t de Student au tableau principal des métriques
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                t_values = []
-                for feature in best_features:
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
-                            t_values.append(abs(t_val))
-                
-                if t_values:
-                    avg_t = sum(t_values) / len(t_values)
-                    sig_count = sum(1 for t in t_values if t > 2)
-                    sig_pct = sig_count / len(t_values) * 100
-                    
-                    # Séparation des appels à tooltip et des balises HTML
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")
-                    metrics_table += f"</td><td>{avg_t:.2f}</td></tr>"
-                    
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("% Var. signif.", "Pourcentage de variables statistiquement significatives (|t| > 2). 100% indique que toutes les variables ont un impact significatif.")
-                    metrics_table += f"</td><td>{sig_pct:.0f}%</td></tr>"
-            
-            metrics_table += "</table>"
-            
-            # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                # Séparation de la structure HTML et de la fonction tooltip
-                metrics_table += "<h4>Coefficients et valeurs t de Student</h4>"
-                metrics_table += "<table class=\"stats-table\">"
-                metrics_table += "<tr><th>Variable</th><th>Coefficient</th><th>"
-                metrics_table += tooltip("Valeur t", "La statistique t de Student mesure la significativité d'un coefficient. En général, une valeur |t| > 2 indique une significativité statistique à un niveau de confiance de 95%.")
-                metrics_table += "</th><th>Significatif</th></tr>"
-                
-                # Ajouter chaque variable et sa valeur t
-                has_valid_t_values = False
-                
-                for feature in best_features:
-                    coef = best_metrics['coefficients'][feature]
-                    
-                    # Vérifier si nous avons des statistiques t valides
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_value = None
-                        if isinstance(best_metrics['t_stats'][feature], dict) and 't_value' in best_metrics['t_stats'][feature]:
-                            t_value = best_metrics['t_stats'][feature]['t_value']
-                        elif not isinstance(best_metrics['t_stats'][feature], dict):
-                            t_value = best_metrics['t_stats'][feature]
-                            
-                        # Formatage sécurisé de la valeur t
-                        if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-                            has_valid_t_values = True
-                            formatted_t = f"{t_value:.4f}"
-                            significant = abs(t_value) > 2
-                            significance_class = "significant" if significant else "not-significant"
-                            significance_label = "Oui" if significant else "Non"
-                        else:
-                            formatted_t = "N/A"
-                            significance_class = ""
-                            significance_label = "N/A"
-                        
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>{formatted_t}</td>"
-                        metrics_table += f"<td><span class=\"significance-badge {significance_class}\">{significance_label}</span></td></tr>"
-                    else:
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>N/A</td><td>N/A</td></tr>"
-                
-                metrics_table += "</table>"
-                
-                # Ajouter explication sur l'interprétation des valeurs t
-                if has_valid_t_values:
-                    # Séparation de la structure HTML et des appels à tooltip
-                    metrics_table += "<div style=\"margin-top: 10px; font-size: 0.9em; color: #555;\"><p>"
-                    metrics_table += tooltip("Interprétation", "Une variable avec une valeur |t| > 2 est considérée comme statistiquement significative au niveau de confiance de 95%. Les variables non-significatives peuvent être retirées du modèle sans affecter significativement sa qualité.")
-                    metrics_table += " Les variables avec une valeur |t| élevée ont un impact plus significatif sur le modèle.</p></div>"
-            
-            st.markdown(metrics_table, unsafe_allow_html=True)
-        
-        # Graphique de consommation
-        st.subheader("Visualisation des résultats")
-        
-        # Prédictions du modèle
-        X_best = df_filtered[best_features]
-        y_pred = best_model.predict(X_best)
-        
-        # Configuration du style des graphiques pour correspondre au thème
-        plt.style.use('seaborn-v0_8-whitegrid')
-        plt.rcParams['axes.facecolor'] = '#F5F5F5'
-        plt.rcParams['figure.facecolor'] = '#E7DDD9'
-        plt.rcParams['axes.edgecolor'] = '#00485F'
-        plt.rcParams['axes.labelcolor'] = '#00485F'
-        plt.rcParams['axes.titlecolor'] = '#00485F'
-        plt.rcParams['xtick.color'] = '#0C1D2D'
-        plt.rcParams['ytick.color'] = '#0C1D2D'
-        plt.rcParams['grid.color'] = '#00485F'
-        plt.rcParams['grid.alpha'] = 0.1
-        
-        # Graphique de comparaison
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
-        ax.plot(range(len(y)), y_pred, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Consommation ajustée", zorder=10)
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée", fontweight='bold', fontsize=14)
-        ax.set_xlabel("Observations", fontweight='bold')
-        ax.set_ylabel("Consommation", fontweight='bold')
-        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-        ax.grid(True, linestyle='--', alpha=0.2)
-        # Annotation du R²
-        ax.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                    fontsize=12, fontweight='bold', color='#00485F',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-        st.pyplot(fig)
-        
-        # Création d'une mise en page en colonnes pour les deux derniers graphiques
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Graphique de dispersion (measured vs predicted)
-            fig2, ax2 = plt.subplots(figsize=(8, 7))
-            scatter = ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.8, s=50, edgecolor='#00485F')
-            
-            # Ligne de référence y=x
-            min_val = min(min(y), min(y_pred))
-            max_val = max(max(y), max(y_pred))
-            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=1.5, label="Référence y=x")
-            
-            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
-            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
-            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
-            ax2.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-            ax2.grid(True, linestyle='--', alpha=0.2)
-            # Annotation du CV(RMSE)
-            ax2.annotate(f"CV(RMSE) = {best_metrics['cv_rmse']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-            st.pyplot(fig2)
-        
-        with col2:
-            # Affichage des résidus
-            residus = y - y_pred
-            
-            fig3, ax3 = plt.subplots(figsize=(8, 7))
-            ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=50, edgecolor='#00485F')
-            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.5, linewidth=1.5)
-            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
-            ax3.set_xlabel("Observations", fontweight='bold')
-            ax3.set_ylabel("Résidus", fontweight='bold')
-            ax3.grid(True, linestyle='--', alpha=0.2)
-            
-            # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#    # Tri des modèles par R² décroissant
-    all_models.sort(key=lambda x: x['r2'], reverse=True)
-
-    # Résultats du modèle sélectionné
-    if best_model:
-        st.success("Modèle trouvé avec succès !")
-        
-        # Afficher les métriques dans un tableau
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Résultats du modèle")
-            st.markdown(f"""
-            <div class="metrics-card">
-                <h4>Modèle sélectionné: <span class="model-badge">{best_metrics['model_name']}</span></h4>
-                <p>Variables utilisées: {', '.join(best_features)}</p>
-                <p>Conformité IPMVP: <span class="conformity-{best_metrics['classe']}">{best_metrics['conformite']}</span></p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Créer l'équation adaptée selon le type de modèle en utilisant la nouvelle fonction
-            if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                equation = format_equation(best_metrics['intercept'], {feature: best_metrics['coefficients'][feature] for feature in best_features})
-            elif best_metrics['model_type'] == "Polynomiale":
-                equation = format_equation(best_metrics['intercept'], best_metrics['coefficients'])
-            
-            st.markdown(f"""
-            <div class="equation-box">
-                <h4>Équation d'ajustement:</h4>
-                <p>{equation}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        with col2:
-            # Tableau des métriques amélioré avec info-bulles
-            metrics_table = f"""
-            <table class="stats-table">
-                <tr>
-                    <th>Métrique</th>
-                    <th>Valeur</th>
-                </tr>
-                <tr>
-                    <td>{tooltip("R²", "Coefficient de détermination : mesure la proportion de variance de la variable dépendante qui est prédite à partir des variables indépendantes. Plus cette valeur est proche de 1, meilleur est l'ajustement du modèle aux données.")}</td>
-                    <td>{best_metrics['r2']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("RMSE", "Root Mean Square Error (Erreur quadratique moyenne) : mesure l'écart-type des résidus (erreurs de prédiction). Exprimée dans la même unité que la variable dépendante.")}</td>
-                    <td>{best_metrics['rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("CV(RMSE)", "Coefficient de Variation du RMSE : exprime le RMSE en pourcentage de la moyenne observée, permettant de comparer la précision entre différents modèles indépendamment de l'échelle.")}</td>
-                    <td>{best_metrics['cv_rmse']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("MAE", "Mean Absolute Error (Erreur absolue moyenne) : moyenne des valeurs absolues des erreurs. Moins sensible aux valeurs extrêmes que le RMSE.")}</td>
-                    <td>{best_metrics['mae']:.4f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais brut", "Représente l'erreur systématique brute du modèle. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias_raw']:.2f}</td>
-                </tr>
-                <tr>
-                    <td>{tooltip("Biais (%)", "Représente l'erreur systématique du modèle en pourcentage. Un biais positif indique une surestimation, un biais négatif une sous-estimation.")}</td>
-                    <td>{best_metrics['bias']:.2f}%</td>
-                </tr>
-            """
-            
-            # Ajouter les valeurs t de Student au tableau principal des métriques
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                t_values = []
-                for feature in best_features:
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_val = best_metrics['t_stats'][feature]['t_value'] if isinstance(best_metrics['t_stats'][feature], dict) else best_metrics['t_stats'][feature]
-                        if t_val is not None and (isinstance(t_val, float) or isinstance(t_val, int)):
-                            t_values.append(abs(t_val))
-                
-                if t_values:
-                    avg_t = sum(t_values) / len(t_values)
-                    sig_count = sum(1 for t in t_values if t > 2)
-                    sig_pct = sig_count / len(t_values) * 100
-                    
-                    # Séparation des appels à tooltip et des balises HTML
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("t moyen", "Moyenne des valeurs absolues de t de Student. Une valeur élevée indique des variables à forte significativité statistique.")
-                    metrics_table += f"</td><td>{avg_t:.2f}</td></tr>"
-                    
-                    metrics_table += "<tr><td>"
-                    metrics_table += tooltip("% Var. signif.", "Pourcentage de variables statistiquement significatives (|t| > 2). 100% indique que toutes les variables ont un impact significatif.")
-                    metrics_table += f"</td><td>{sig_pct:.0f}%</td></tr>"
-            
-            metrics_table += "</table>"
-            
-            # Ajouter tableau des valeurs t pour les modèles linéaires, Ridge et Lasso
-            if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-                # Séparation de la structure HTML et de la fonction tooltip
-                metrics_table += "<h4>Coefficients et valeurs t de Student</h4>"
-                metrics_table += "<table class=\"stats-table\">"
-                metrics_table += "<tr><th>Variable</th><th>Coefficient</th><th>"
-                metrics_table += tooltip("Valeur t", "La statistique t de Student mesure la significativité d'un coefficient. En général, une valeur |t| > 2 indique une significativité statistique à un niveau de confiance de 95%.")
-                metrics_table += "</th><th>Significatif</th></tr>"
-                
-                # Ajouter chaque variable et sa valeur t
-                has_valid_t_values = False
-                
-                for feature in best_features:
-                    coef = best_metrics['coefficients'][feature]
-                    
-                    # Vérifier si nous avons des statistiques t valides
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_value = None
-                        if isinstance(best_metrics['t_stats'][feature], dict) and 't_value' in best_metrics['t_stats'][feature]:
-                            t_value = best_metrics['t_stats'][feature]['t_value']
-                        elif not isinstance(best_metrics['t_stats'][feature], dict):
-                            t_value = best_metrics['t_stats'][feature]
-                            
-                        # Formatage sécurisé de la valeur t
-                        if t_value is not None and (isinstance(t_value, float) or isinstance(t_value, int)):
-                            has_valid_t_values = True
-                            formatted_t = f"{t_value:.4f}"
-                            significant = abs(t_value) > 2
-                            significance_class = "significant" if significant else "not-significant"
-                            significance_label = "Oui" if significant else "Non"
-                        else:
-                            formatted_t = "N/A"
-                            significance_class = ""
-                            significance_label = "N/A"
-                        
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>{formatted_t}</td>"
-                        metrics_table += f"<td><span class=\"significance-badge {significance_class}\">{significance_label}</span></td></tr>"
-                    else:
-                        metrics_table += f"<tr><td>{feature}</td><td>{coef:.4f}</td><td>N/A</td><td>N/A</td></tr>"
-                
-                metrics_table += "</table>"
-                
-                # Ajouter explication sur l'interprétation des valeurs t
-                if has_valid_t_values:
-                    # Séparation de la structure HTML et des appels à tooltip
-                    metrics_table += "<div style=\"margin-top: 10px; font-size: 0.9em; color: #555;\"><p>"
-                    metrics_table += tooltip("Interprétation", "Une variable avec une valeur |t| > 2 est considérée comme statistiquement significative au niveau de confiance de 95%. Les variables non-significatives peuvent être retirées du modèle sans affecter significativement sa qualité.")
-                    metrics_table += " Les variables avec une valeur |t| élevée ont un impact plus significatif sur le modèle.</p></div>"
-            
-            st.markdown(metrics_table, unsafe_allow_html=True)
-        
-        # Graphique de consommation
-        st.subheader("Visualisation des résultats")
-        
-        # Prédictions du modèle
-        X_best = df_filtered[best_features]
-        y_pred = best_model.predict(X_best)
-        
-        # Configuration du style des graphiques pour correspondre au thème
-        plt.style.use('seaborn-v0_8-whitegrid')
-        plt.rcParams['axes.facecolor'] = '#F5F5F5'
-        plt.rcParams['figure.facecolor'] = '#E7DDD9'
-        plt.rcParams['axes.edgecolor'] = '#00485F'
-        plt.rcParams['axes.labelcolor'] = '#00485F'
-        plt.rcParams['axes.titlecolor'] = '#00485F'
-        plt.rcParams['xtick.color'] = '#0C1D2D'
-        plt.rcParams['ytick.color'] = '#0C1D2D'
-        plt.rcParams['grid.color'] = '#00485F'
-        plt.rcParams['grid.alpha'] = 0.1
-        
-        # Graphique de comparaison
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(range(len(y)), y, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
-        ax.plot(range(len(y)), y_pred, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Consommation ajustée", zorder=10)
-        ax.set_title("Comparaison Consommation Mesurée vs Ajustée", fontweight='bold', fontsize=14)
-        ax.set_xlabel("Observations", fontweight='bold')
-        ax.set_ylabel("Consommation", fontweight='bold')
-        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-        ax.grid(True, linestyle='--', alpha=0.2)
-        # Annotation du R²
-        ax.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                    fontsize=12, fontweight='bold', color='#00485F',
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-        st.pyplot(fig)
-        
-        # Création d'une mise en page en colonnes pour les deux derniers graphiques
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Graphique de dispersion (measured vs predicted)
-            fig2, ax2 = plt.subplots(figsize=(8, 7))
-            scatter = ax2.scatter(y, y_pred, color="#6DBABC", alpha=0.8, s=50, edgecolor='#00485F')
-            
-            # Ligne de référence y=x
-            min_val = min(min(y), min(y_pred))
-            max_val = max(max(y), max(y_pred))
-            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=1.5, label="Référence y=x")
-            
-            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
-            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
-            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
-            ax2.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F")
-            ax2.grid(True, linestyle='--', alpha=0.2)
-            # Annotation du CV(RMSE)
-            ax2.annotate(f"CV(RMSE) = {best_metrics['cv_rmse']:.4f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-            st.pyplot(fig2)
-        
-        with col2:
-            # Affichage des résidus
-            residus = y - y_pred
-            
-            fig3, ax3 = plt.subplots(figsize=(8, 7))
-            ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=50, edgecolor='#00485F')
-            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.5, linewidth=1.5)
-            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
-            ax3.set_xlabel("Observations", fontweight='bold')
-            ax3.set_ylabel("Résidus", fontweight='bold')
-            ax3.grid(True, linestyle='--', alpha=0.2)
-            
-            # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E
-                        # Annotation du biais
-            ax3.annotate(f"Biais brut = {best_metrics['bias_raw']:.2f}", xy=(0.02, 0.95), xycoords='axes fraction',
+            ax3.annotate(f"Biais = {best_metrics['bias']:.2f}%", xy=(0.02, 0.95), xycoords='axes fraction',
                         fontsize=12, fontweight='bold', color='#00485F',
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
             st.pyplot(fig3)
         
         # Ajout d'un expander pour expliquer les différents modèles de régression
-        with st.expander("Interprétation des différents modèles de régression"):
+        with st.expander("📚 Interprétation des différents modèles de régression"):
             st.markdown("""
             ### Types de modèles de régression
             
@@ -3061,7 +1713,7 @@ if df is not None and lancer_calcul:
             """)
             
         # Ajout d'un expander pour expliquer l'interprétation des graphiques
-        with st.expander("Comment interpréter ces graphiques ?"):
+        with st.expander("📚 Comment interpréter ces graphiques ?"):
             st.markdown("""
             ### Interprétation des visualisations
             
@@ -3083,7 +1735,7 @@ if df is not None and lancer_calcul:
             """)
             
         # Ajout d'un expander pour expliquer les valeurs t de Student
-        with st.expander("Comprendre les valeurs t de Student"):
+        with st.expander("📚 Comprendre les valeurs t de Student"):
             st.markdown("""
             ### Interprétation des valeurs t de Student
             
@@ -3108,8 +1760,8 @@ if df is not None and lancer_calcul:
             Dans le cas où le nombre d'observations est proche du nombre de variables, les valeurs t peuvent être moins fiables en raison du faible nombre de degrés de liberté.
             """)
                 
-        # Tableau des résultats pour tous les modèles testés
-        st.subheader("Classement des modèles testés")
+        # 🔹 Tableau des résultats pour tous les modèles testés
+        st.subheader("📋 Classement des modèles testés")
         
         # Assurer que la liste all_models est unique par modèle et variables
         # C'est-à-dire qu'il n'y a pas de doublons du même modèle avec les mêmes variables
@@ -3136,8 +1788,7 @@ if df is not None and lancer_calcul:
                     "Variables": ", ".join(model['features']),
                     "R²": f"{model['r2']:.4f}",
                     "CV(RMSE)": f"{model['cv_rmse']:.4f}",
-                    "Biais brut": f"{model['bias_raw']:.2f}",
-                    "Biais (%)": f"{model['bias']:.2f}%",
+                    "Biais (%)": f"{model['bias']:.2f}",
                     "Conformité": model['conformite']
                 }
                 
@@ -3171,4 +1822,4 @@ if df is not None and lancer_calcul:
         else:
             st.info("Aucun modèle alternatif disponible pour comparaison.")
     else:
-        st.error("Aucun modèle valide n'a été trouvé.")
+        st.error("⚠️ Aucun modèle valide n'a été trouvé.")
