@@ -829,7 +829,7 @@ st.markdown("""
         <th>Consommation_kWh</th>
         <th>DJU_chauffage</th>
         <th>Occupation</th>
-        <th>Facteurs influents X</th>
+        <th>DJF</th>
     </tr>
     <tr>
         <td>01/01/2023</td>
