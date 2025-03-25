@@ -1012,7 +1012,7 @@ elif model_type == "Polynomiale":
 # Nombre de variables à tester
 max_features = st.sidebar.slider("Nombre de variables à tester", 1, 4, 2)
 
-st.sidebar.markdown("---")ier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
+st.sidebar.markdown("---")
     <li><strong>Sélection des données</strong> : Dans le panneau latéral, sélectionnez :
         <ul>
             <li>La colonne de date</li>
