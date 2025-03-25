@@ -762,12 +762,13 @@ st.markdown("""
         background-color: #f9f9f9;
     }
 # 📌 **Description de l'application**
-st.title("📊 Calcul IPMVP")
-st.markdown("Bienvenue sur **l'Analyse & Calcul IPMVP** 🔍 !")
+st.title("Calcul IPMVP")
+st.markdown("Bienvenue sur **l'Analyse & Calcul IPMVP** !")
 st.markdown("Cette application vous permet d'analyser **vos données de consommation énergétique** et de trouver le meilleur modèle d'ajustement basé sur plusieurs variables explicatives selon la méthodologie IPMVP.")
+
 st.markdown("""
 <div class="instruction-card">
-<h3>🛠️ Guide d'utilisation</h3>
+<h3>Guide d'utilisation</h3>
 <ol>
     <li><strong>Préparation du fichier Excel</strong> : Assurez-vous que votre fichier contient une colonne de dates, une colonne de consommation et des variables explicatives potentielles (degrés-jours, occupation, production, etc.)</li>
     <li><strong>Import du fichier</strong> : Utilisez le bouton d'import pour charger votre fichier Excel (.xlsx ou .xls)</li>
@@ -802,7 +803,7 @@ st.markdown("""
     </li>
 </ol>
 </div>
-
+""", unsafe_allow_html=True)
 <div class="instruction-card">
 <h3>📊 Format de fichier requis</h3>
 <p>Veuillez préparer votre fichier Excel avec les points suivants à l'esprit :</p>
