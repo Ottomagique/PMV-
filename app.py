@@ -834,30 +834,30 @@ st.markdown("""
     <tr>
         <td>01/01/2023</td>
         <td>1250.5</td>
-        <td>15.2</td>
+        <td>350</td>
         <td>85</td>
-        <td>750</td>
+        <td>0</td>
     </tr>
     <tr>
         <td>01/02/2023</td>
         <td>1180.3</td>
-        <td>12.8</td>
+        <td>290</td>
         <td>92</td>
-        <td>820</td>
+        <td>0</td>
     </tr>
     <tr>
         <td>01/03/2023</td>
         <td>985.7</td>
-        <td>8.4</td>
+        <td>210</td>
         <td>88</td>
-        <td>780</td>
+        <td>25</td>
     </tr>
     <tr>
         <td>01/04/2023</td>
         <td>875.2</td>
-        <td>5.1</td>
+        <td>120</td>
         <td>90</td>
-        <td>810</td>
+        <td>80</td>
     </tr>
 </table>
 <p><strong>Important :</strong> Utilisez des points (et non des virgules) pour les valeurs décimales. Par exemple, écrivez 1250.5 et non 1250,5.</p>
