@@ -1,6 +1,6 @@
 # =============================================================================
 # PARTIE 1 : BASE + AUTHENTIFICATION
-# Application IPMVP Améliorée - Version avec Train/Test et Score Composite
+# Application IPMVP Améliorée - Version 2.1 - Visualisations enrichies
 # =============================================================================
 
 import streamlit as st
@@ -1412,7 +1412,7 @@ if period_choice == "Sélectionner manuellement une période spécifique" and df
         
         # Validation de la période avec messages adaptatifs
         if months_diff < 12:
-            st.sidebar.error(f"❌ Période trop courte: {months_diff} mois (minimum: 12)")
+            st.sidebar.warning(f"⚠️ Période courte: {months_diff} mois (recommandé: ≥12)")
         elif months_diff == 12:
             st.sidebar.success(f"✅ Période IPMVP standard: {months_diff} mois")
         elif months_diff < 24:
@@ -1571,6 +1571,10 @@ if df is not None and lancer_calcul and selected_vars:
     
     # Initialisation
     st.subheader("⚙️ Analyse en cours...")
+        # Warning si moins de 12 mois
+        if len(df_filtered) < 12:
+            st.warning(f"⚠️ **Attention :** Seulement {len(df_filtered)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
+        
     all_models = []
     
     # Conversion et tri des données
@@ -1908,6 +1912,7 @@ if df is not None and lancer_calcul and selected_vars:
         st.info(f"📊 **Analyse sur période sélectionnée** : {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}")
         
         # Vérification données suffisantes
+        # Vérification du nombre d'observations
         if len(df_filtered) < 10:
             st.error("❌ **Données insuffisantes** pour l'analyse (minimum 10 points)")
             st.stop()
@@ -2453,17 +2458,39 @@ if df is not None and lancer_calcul and selected_vars:
             ax.plot(train_indices, y_pred_all, color="#96B91D", marker='o', linewidth=2.5, markersize=4, label="Consommation ajustée")
             title_suffix = f" ({len(train_indices)} points)"
         
-        ax.set_title(f"Comparaison Consommation Mesurée vs Ajustée{title_suffix}", fontweight='bold', fontsize=16, pad=20)
+        ax.set_title(f"📊 Comparaison Consommation Mesurée vs Ajustée{title_suffix}", fontweight='bold', fontsize=16, pad=20)
         ax.set_xlabel("Observations", fontweight='bold', fontsize=12)
         ax.set_ylabel("Consommation", fontweight='bold', fontsize=12)
         ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F", fontsize=10)
         ax.grid(True, linestyle='--', alpha=0.3)
         
-        # Annotation du score
+        # Annotations enrichies
+        # Score IPMVP
         ax.annotate(f"Score IPMVP = {best_metrics['ipmvp_score']:.1f}/100", 
-                   xy=(0.02, 0.95), xycoords='axes fraction',
+                   xy=(0.02, 0.98), xycoords='axes fraction',
                    fontsize=14, fontweight='bold', color='#00485F',
+                   bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9),
+                   verticalalignment='top')
+        
+        # R² et CV(RMSE)
+        metrics_text = f"R² = {best_metrics['r2']:.3f}
+CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+        if best_metrics.get('mode') == 'train_test':
+            metrics_text += f"
+(Test Set)"
+        ax.annotate(metrics_text, 
+                   xy=(0.02, 0.85), xycoords='axes fraction',
+                   fontsize=11, fontweight='bold', color='#00485F',
                    bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9))
+        
+        
+        # Ajout du nombre total de valeurs
+        total_values_text = f"Total: {len(y_all)} valeurs"
+        ax.text(0.98, 0.02, total_values_text,
+               transform=ax.transAxes,
+               fontsize=10, color='#00485F',
+               bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#6DBABC", alpha=0.8),
+               verticalalignment='bottom', horizontalalignment='right')
         
         st.pyplot(fig)
         
@@ -2488,13 +2515,20 @@ if df is not None and lancer_calcul and selected_vars:
             max_val = max(max(y_all), max(y_pred_all))
             ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=2, alpha=0.8, label="Référence y=x")
             
-            ax2.set_title("Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
+            ax2.set_title("📈 Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
             ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
             ax2.set_ylabel("Consommation Prédite", fontweight='bold')
             ax2.grid(True, linestyle='--', alpha=0.3)
             
             # Annotation
-            ax2.annotate(f"R² = {best_metrics['r2']:.4f}", xy=(0.05, 0.95), xycoords='axes fraction',
+            # Annotation enrichie du graphique de dispersion
+        if best_metrics.get('mode') == 'train_test':
+            metrics_text = f"R² (Test) = {best_metrics['r2']:.4f}
+CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+        else:
+            metrics_text = f"R² = {best_metrics['r2']:.4f}
+CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+        ax2.annotate(metrics_text, xy=(0.05, 0.95), xycoords='axes fraction',
                         fontsize=12, fontweight='bold', color='#00485F',
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
             
@@ -2517,7 +2551,7 @@ if df is not None and lancer_calcul and selected_vars:
                            edgecolor='#2E7D32', linewidth=1)
             
             ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.8, linewidth=2)
-            ax3.set_title("Analyse des Résidus", fontweight='bold', fontsize=14)
+            ax3.set_title("📉 Analyse des Résidus", fontweight='bold', fontsize=14)
             ax3.set_xlabel("Observations", fontweight='bold')
             ax3.set_ylabel("Résidus", fontweight='bold')
             ax3.grid(True, linestyle='--', alpha=0.3)
@@ -2775,7 +2809,7 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.0 - Mission accomplie ! 🎉</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.1 - Visualisations enrichies ! 🎉</strong></p>
     <p><strong>🔧 Améliorations intégrées :</strong></p>
     <ul style="text-align: left; display: inline-block;">
         <li>✅ Détection overfitting intelligente</li>
@@ -2783,6 +2817,8 @@ st.markdown("""
         <li>✅ Mode train/test adaptatif</li>
         <li>✅ Limitations sécurité (règle 10:1)</li>
         <li>✅ Métriques enrichies et visualisations améliorées</li>
+        <li>✅ Affichage détaillé des intervalles train/test</li>
+        <li>✅ R² et CV(RMSE) sur tous les graphiques</li>
         <li>✅ Ridge/Lasso retrouvent leur utilité</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
