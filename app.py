@@ -1571,11 +1571,7 @@ if df is not None and lancer_calcul and selected_vars:
     
     # Initialisation
     st.subheader("⚙️ Analyse en cours...")
-    
-    # Warning si moins de 12 mois
-    if len(df_filtered) < 12:
-        st.warning(f"⚠️ **Attention :** Seulement {len(df_filtered)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
-    
+
     all_models = []
     
     # Conversion et tri des données
@@ -1881,6 +1877,10 @@ if df is not None and lancer_calcul and selected_vars:
         if best_period_data is not None:
             st.success(f"✅ **Meilleure période trouvée** : {best_period_name}")
             
+            # Warning si moins de 12 mois
+            if len(best_period_data) < 12:
+                st.warning(f"⚠️ **Attention :** Seulement {len(best_period_data)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
+            
             # Affichage du score composite
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -1911,6 +1911,10 @@ if df is not None and lancer_calcul and selected_vars:
         df_filtered = df[(df[date_col].dt.date >= start_date) & (df[date_col].dt.date <= end_date)]
         
         st.info(f"📊 **Analyse sur période sélectionnée** : {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}")
+        
+        # Warning si moins de 12 mois
+        if len(df_filtered) < 12:
+            st.warning(f"⚠️ **Attention :** Seulement {len(df_filtered)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
         
         # Vérification données suffisantes
         if len(df_filtered) < 10:
