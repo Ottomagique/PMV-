@@ -2667,7 +2667,8 @@ if df is not None and lancer_calcul and selected_vars:
             - Chaque variable doit avoir une justification physique
             - Privilégier les variables significatives (|t| > 2)
             - Éviter la redondance entre variables
-            """)
+            """, unsafe_allow_html=True)
+
         
         with st.expander("📚 Recommandations d'amélioration"):
             recommendations = []
@@ -2739,7 +2740,7 @@ if df is not None and lancer_calcul and selected_vars:
             status_msg = "Modèle non conforme aux standards IPMVP, révision majeure nécessaire."
         
         st.markdown(f"""
-        <div class="alert-card" style="border-color: {status_color}; background-color: {status_color}15;">
+        <div class="alert-card" style="border-color: {status_color}; background-color: {status_color}1e;">
             <h3 style="color: {status_color}; margin-bottom: 10px;">{status}</h3>
             <p style="font-size: 16px; margin-bottom: 15px;"><strong>{status_msg}</strong></p>
             
