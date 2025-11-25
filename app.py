@@ -2300,16 +2300,24 @@ if df is not None and lancer_calcul and selected_vars:
         if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
             st.subheader("📈 Analyse de significativité statistique")
             
-            t_stats_html = """
-            <table class="stats-table">
-                <tr>
-                    <th>Variable</th>
-                    <th>Coefficient</th>
-                    <th>Valeur t</th>
-                    <th>p-value</th>
-                    <th>Significatif</th>
-                </tr>
-            """
+            # Construction du tableau avec styles inline
+            table_style = "width: 100%; border-collapse: collapse; margin: 15px 0;"
+            th_style = "background-color: #00485F; color: white; padding: 12px; text-align: left; font-weight: 600; border: 1px solid #ddd;"
+            td_style = "padding: 10px; border: 1px solid #ddd;"
+            
+            t_stats_html = f"""
+<table style="{table_style}">
+    <thead>
+        <tr>
+            <th style="{th_style}">Variable</th>
+            <th style="{th_style}">Coefficient</th>
+            <th style="{th_style}">Valeur t</th>
+            <th style="{th_style}">p-value</th>
+            <th style="{th_style}">Significatif</th>
+        </tr>
+    </thead>
+    <tbody>
+"""
             
             significant_count = 0
             total_count = 0
@@ -2333,31 +2341,73 @@ if df is not None and lancer_calcul and selected_vars:
                     if significant:
                         significant_count += 1
                     
-                    sig_class = "significant" if significant else "not-significant"
-                    sig_text = "Oui" if significant else "Non"
+                    # Badge de significativité avec style inline
+                    if significant:
+                        badge_style = "background-color: #96B91D; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;"
+                        sig_text = "Oui"
+                    else:
+                        badge_style = "background-color: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;"
+                        sig_text = "Non"
                     
                     t_stats_html += f"""
-                    <tr>
-                        <td><strong>{feature}</strong></td>
-                        <td>{coef:.4f}</td>
-                        <td>{t_value:.3f}</td>
-                        <td>{p_value if isinstance(p_value, str) else f'{p_value:.4f}'}</td>
-                        <td><span class="significance-badge {sig_class}">{sig_text}</span></td>
-                    </tr>
-                    """
+        <tr style="background-color: {'rgba(150, 185, 29, 0.05)' if significant else 'white'};">
+            <td style="{td_style}"><strong>{feature}</strong></td>
+            <td style="{td_style}">{coef:.4f}</td>
+            <td style="{td_style}">{t_value:.3f}</td>
+            <td style="{td_style}">{p_value if isinstance(p_value, str) else f'{p_value:.4f}'}</td>
+            <td style="{td_style}"><span style="{badge_style}">{sig_text}</span></td>
+        </tr>
+"""
                 else:
                     t_stats_html += f"""
-                    <tr>
-                        <td><strong>{feature}</strong></td>
-                        <td>{coef:.4f}</td>
-                        <td>N/A</td>
-                        <td>N/A</td>
-                        <td>N/A</td>
-                    </tr>
-                    """
+        <tr>
+            <td style="{td_style}"><strong>{feature}</strong></td>
+            <td style="{td_style}">{coef:.4f}</td>
+            <td style="{td_style}">N/A</td>
+            <td style="{td_style}">N/A</td>
+            <td style="{td_style}">N/A</td>
+        </tr>
+"""
             
-            t_stats_html += "</table>"
+            t_stats_html += """
+    </tbody>
+</table>
+"""
             st.markdown(t_stats_html, unsafe_allow_html=True)
+            
+            # Fallback : affichage en dataframe natif
+            with st.expander("📊 Voir le tableau (format natif)"):
+                sig_data = []
+                for feature in best_features:
+                    coef = best_metrics['coefficients'][feature]
+                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
+                        t_stat = best_metrics['t_stats'][feature]
+                        if isinstance(t_stat, dict):
+                            t_value = t_stat.get('t_value', 0)
+                            p_value = t_stat.get('p_value', 1)
+                            significant = t_stat.get('significant', False)
+                        else:
+                            t_value = t_stat
+                            p_value = "N/A"
+                            significant = abs(t_value) > 2
+                        
+                        sig_data.append({
+                            "Variable": feature,
+                            "Coefficient": f"{coef:.4f}",
+                            "Valeur t": f"{t_value:.3f}",
+                            "p-value": p_value if isinstance(p_value, str) else f"{p_value:.4f}",
+                            "Significatif": "✅ Oui" if significant else "❌ Non"
+                        })
+                    else:
+                        sig_data.append({
+                            "Variable": feature,
+                            "Coefficient": f"{coef:.4f}",
+                            "Valeur t": "N/A",
+                            "p-value": "N/A",
+                            "Significatif": "N/A"
+                        })
+                
+                st.dataframe(sig_data, use_container_width=True, hide_index=True)
             
             # Résumé de la significativité
             if total_count > 0:
