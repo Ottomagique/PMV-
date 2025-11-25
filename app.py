@@ -2300,27 +2300,12 @@ if df is not None and lancer_calcul and selected_vars:
         if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
             st.subheader("📈 Analyse de significativité statistique")
             
-            # Construction du tableau avec styles inline
-            table_style = "width: 100%; border-collapse: collapse; margin: 15px 0;"
-            th_style = "background-color: #00485F; color: white; padding: 12px; text-align: left; font-weight: 600; border: 1px solid #ddd;"
-            td_style = "padding: 10px; border: 1px solid #ddd;"
-            
-            t_stats_html = f"""
-<table style="{table_style}">
-    <thead>
-        <tr>
-            <th style="{th_style}">Variable</th>
-            <th style="{th_style}">Coefficient</th>
-            <th style="{th_style}">Valeur t</th>
-            <th style="{th_style}">p-value</th>
-            <th style="{th_style}">Significatif</th>
-        </tr>
-    </thead>
-    <tbody>
-"""
+            # Construction du tableau de significativité avec st.dataframe (natif Streamlit)
+            st.subheader("📈 Analyse de significativité statistique")
             
             significant_count = 0
             total_count = 0
+            sig_data = []
             
             for feature in best_features:
                 coef = best_metrics['coefficients'][feature]
@@ -2341,73 +2326,35 @@ if df is not None and lancer_calcul and selected_vars:
                     if significant:
                         significant_count += 1
                     
-                    # Badge de significativité avec style inline
-                    if significant:
-                        badge_style = "background-color: #96B91D; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;"
-                        sig_text = "Oui"
-                    else:
-                        badge_style = "background-color: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;"
-                        sig_text = "Non"
-                    
-                    t_stats_html += f"""
-        <tr style="background-color: {'rgba(150, 185, 29, 0.05)' if significant else 'white'};">
-            <td style="{td_style}"><strong>{feature}</strong></td>
-            <td style="{td_style}">{coef:.4f}</td>
-            <td style="{td_style}">{t_value:.3f}</td>
-            <td style="{td_style}">{p_value if isinstance(p_value, str) else f'{p_value:.4f}'}</td>
-            <td style="{td_style}"><span style="{badge_style}">{sig_text}</span></td>
-        </tr>
-"""
+                    sig_data.append({
+                        "Variable": feature,
+                        "Coefficient": round(coef, 4),
+                        "Valeur t": round(t_value, 3) if isinstance(t_value, (int, float)) else t_value,
+                        "p-value": round(p_value, 4) if isinstance(p_value, (int, float)) else p_value,
+                        "Significatif": "✅ Oui" if significant else "❌ Non"
+                    })
                 else:
-                    t_stats_html += f"""
-        <tr>
-            <td style="{td_style}"><strong>{feature}</strong></td>
-            <td style="{td_style}">{coef:.4f}</td>
-            <td style="{td_style}">N/A</td>
-            <td style="{td_style}">N/A</td>
-            <td style="{td_style}">N/A</td>
-        </tr>
-"""
+                    sig_data.append({
+                        "Variable": feature,
+                        "Coefficient": round(coef, 4),
+                        "Valeur t": "N/A",
+                        "p-value": "N/A",
+                        "Significatif": "N/A"
+                    })
             
-            t_stats_html += """
-    </tbody>
-</table>
-"""
-            st.markdown(t_stats_html, unsafe_allow_html=True)
-            
-            # Fallback : affichage en dataframe natif
-            with st.expander("📊 Voir le tableau (format natif)"):
-                sig_data = []
-                for feature in best_features:
-                    coef = best_metrics['coefficients'][feature]
-                    if feature in best_metrics['t_stats'] and best_metrics['t_stats'][feature] is not None:
-                        t_stat = best_metrics['t_stats'][feature]
-                        if isinstance(t_stat, dict):
-                            t_value = t_stat.get('t_value', 0)
-                            p_value = t_stat.get('p_value', 1)
-                            significant = t_stat.get('significant', False)
-                        else:
-                            t_value = t_stat
-                            p_value = "N/A"
-                            significant = abs(t_value) > 2
-                        
-                        sig_data.append({
-                            "Variable": feature,
-                            "Coefficient": f"{coef:.4f}",
-                            "Valeur t": f"{t_value:.3f}",
-                            "p-value": p_value if isinstance(p_value, str) else f"{p_value:.4f}",
-                            "Significatif": "✅ Oui" if significant else "❌ Non"
-                        })
-                    else:
-                        sig_data.append({
-                            "Variable": feature,
-                            "Coefficient": f"{coef:.4f}",
-                            "Valeur t": "N/A",
-                            "p-value": "N/A",
-                            "Significatif": "N/A"
-                        })
-                
-                st.dataframe(sig_data, use_container_width=True, hide_index=True)
+            # Affichage avec st.dataframe (natif, toujours fonctionnel)
+            st.dataframe(
+                sig_data,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Variable": st.column_config.TextColumn("Variable", help="Variable explicative"),
+                    "Coefficient": st.column_config.NumberColumn("Coefficient", help="Coefficient de régression", format="%.4f"),
+                    "Valeur t": st.column_config.TextColumn("Valeur t", help="Statistique t de Student"),
+                    "p-value": st.column_config.TextColumn("p-value", help="Probabilité associée"),
+                    "Significatif": st.column_config.TextColumn("Significatif", help="Significatif si |t| > 2 (p < 0.05)")
+                }
+            )
             
             # Résumé de la significativité
             if total_count > 0:
@@ -2789,50 +2736,48 @@ if df is not None and lancer_calcul and selected_vars:
             status_color = "#f44336"
             status_msg = "Modèle non conforme aux standards IPMVP, révision majeure nécessaire."
         
-        # Construction du résumé avec HTML sécurisé
-        resume_html = f"""
-<div style="border-left: 4px solid {status_color}; background-color: rgba(200, 200, 200, 0.1); padding: 20px; border-radius: 8px; margin: 15px 0;">
-    <h3 style="color: {status_color}; margin-top: 0;">{status}</h3>
-    <p style="font-size: 16px;"><strong>{status_msg}</strong></p>
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-            <td style="padding: 8px;"><strong>🏆 Score IPMVP:</strong></td>
-            <td style="padding: 8px;">{best_metrics['ipmvp_score']:.1f}/100</td>
-            <td style="padding: 8px;"><strong>📊 R²:</strong></td>
-            <td style="padding: 8px;">{best_metrics['r2']:.3f}</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px;"><strong>🎯 CV(RMSE):</strong></td>
-            <td style="padding: 8px;">{best_metrics['cv_rmse']:.3f}</td>
-            <td style="padding: 8px;"><strong>⚖️ Biais:</strong></td>
-            <td style="padding: 8px;">{best_metrics['bias']:.1f}%</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px;"><strong>🧮 Modèle:</strong></td>
-            <td style="padding: 8px;" colspan="3">{best_metrics['model_name']}</td>
-        </tr>
-        <tr>
-            <td style="padding: 8px;"><strong>📋 Variables:</strong></td>
-            <td style="padding: 8px;" colspan="3">{len(best_features)} ({', '.join(best_features[:2])}{'...' if len(best_features) > 2 else ''})</td>
-        </tr>
-    </table>
-</div>
-"""
-        st.markdown(resume_html, unsafe_allow_html=True)
+        # Affichage du résumé avec composants natifs Streamlit (plus fiable)
+        st.markdown(f"### {status}")
+        st.info(status_msg)
         
-        # Affichage alternatif si HTML ne fonctionne pas
-        with st.expander("📊 Voir les détails (format texte)"):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("🏆 Score IPMVP", f"{best_metrics['ipmvp_score']:.1f}/100")
-                st.metric("📊 R²", f"{best_metrics['r2']:.3f}")
-            with col2:
-                st.metric("🎯 CV(RMSE)", f"{best_metrics['cv_rmse']:.3f}")
-                st.metric("⚖️ Biais", f"{best_metrics['bias']:.1f}%")
-            with col3:
-                st.write(f"**🧮 Modèle:** {best_metrics['model_name']}")
-                st.write(f"**📋 Variables:** {len(best_features)}")
+        # Métriques en colonnes
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                label="🏆 Score IPMVP",
+                value=f"{best_metrics['ipmvp_score']:.1f}/100",
+                help="Score composite évaluant performance, conformité IPMVP et simplicité"
+            )
+            st.metric(
+                label="📊 R²",
+                value=f"{best_metrics['r2']:.3f}",
+                help="Coefficient de détermination (≥0.75 pour excellente conformité IPMVP)"
+            )
+        
+        with col2:
+            st.metric(
+                label="🎯 CV(RMSE)",
+                value=f"{best_metrics['cv_rmse']:.3f}",
+                help="Coefficient de variation RMSE (≤0.15 pour excellente conformité IPMVP)"
+            )
+            st.metric(
+                label="⚖️ Biais",
+                value=f"{best_metrics['bias']:.1f}%",
+                help="Erreur systématique du modèle (|biais| < 5% recommandé)"
+            )
+        
+        with col3:
+            st.metric(
+                label="🧮 Modèle",
+                value=best_metrics['model_name'][:20],
+                help="Type de régression utilisé"
+            )
+            st.metric(
+                label="📋 Variables",
+                value=f"{len(best_features)}",
+                help=f"Variables: {', '.join(best_features)}"
+            )
         
     else:
         st.error("❌ **Aucun modèle valide trouvé**")
