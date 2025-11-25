@@ -2739,21 +2739,50 @@ if df is not None and lancer_calcul and selected_vars:
             status_color = "#f44336"
             status_msg = "Modèle non conforme aux standards IPMVP, révision majeure nécessaire."
         
-        st.markdown(f"""
-        <div class="alert-card" style="border-color: {status_color}; background-color: {status_color}1e;">
-            <h3 style="color: {status_color}; margin-bottom: 10px;">{status}</h3>
-            <p style="font-size: 16px; margin-bottom: 15px;"><strong>{status_msg}</strong></p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-                <div><strong>🏆 Score IPMVP :</strong> {best_metrics['ipmvp_score']:.1f}/100</div>
-                <div><strong>📊 R² :</strong> {best_metrics['r2']:.3f}</div>
-                <div><strong>🎯 CV(RMSE) :</strong> {best_metrics['cv_rmse']:.3f}</div>
-                <div><strong>⚖️ Biais :</strong> {best_metrics['bias']:.1f}%</div>
-                <div><strong>🧮 Modèle :</strong> {best_metrics['model_name']}</div>
-                <div><strong>📋 Variables :</strong> {len(best_features)} ({', '.join(best_features[:2])}{'...' if len(best_features) > 2 else ''})</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Construction du résumé avec HTML sécurisé
+        resume_html = f"""
+<div style="border-left: 4px solid {status_color}; background-color: rgba(200, 200, 200, 0.1); padding: 20px; border-radius: 8px; margin: 15px 0;">
+    <h3 style="color: {status_color}; margin-top: 0;">{status}</h3>
+    <p style="font-size: 16px;"><strong>{status_msg}</strong></p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px;"><strong>🏆 Score IPMVP:</strong></td>
+            <td style="padding: 8px;">{best_metrics['ipmvp_score']:.1f}/100</td>
+            <td style="padding: 8px;"><strong>📊 R²:</strong></td>
+            <td style="padding: 8px;">{best_metrics['r2']:.3f}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><strong>🎯 CV(RMSE):</strong></td>
+            <td style="padding: 8px;">{best_metrics['cv_rmse']:.3f}</td>
+            <td style="padding: 8px;"><strong>⚖️ Biais:</strong></td>
+            <td style="padding: 8px;">{best_metrics['bias']:.1f}%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><strong>🧮 Modèle:</strong></td>
+            <td style="padding: 8px;" colspan="3">{best_metrics['model_name']}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><strong>📋 Variables:</strong></td>
+            <td style="padding: 8px;" colspan="3">{len(best_features)} ({', '.join(best_features[:2])}{'...' if len(best_features) > 2 else ''})</td>
+        </tr>
+    </table>
+</div>
+"""
+        st.markdown(resume_html, unsafe_allow_html=True)
+        
+        # Affichage alternatif si HTML ne fonctionne pas
+        with st.expander("📊 Voir les détails (format texte)"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("🏆 Score IPMVP", f"{best_metrics['ipmvp_score']:.1f}/100")
+                st.metric("📊 R²", f"{best_metrics['r2']:.3f}")
+            with col2:
+                st.metric("🎯 CV(RMSE)", f"{best_metrics['cv_rmse']:.3f}")
+                st.metric("⚖️ Biais", f"{best_metrics['bias']:.1f}%")
+            with col3:
+                st.write(f"**🧮 Modèle:** {best_metrics['model_name']}")
+                st.write(f"**📋 Variables:** {len(best_features)}")
         
     else:
         st.error("❌ **Aucun modèle valide trouvé**")
