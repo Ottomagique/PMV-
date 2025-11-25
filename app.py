@@ -1571,10 +1571,11 @@ if df is not None and lancer_calcul and selected_vars:
     
     # Initialisation
     st.subheader("⚙️ Analyse en cours...")
-        # Warning si moins de 12 mois
-        if len(df_filtered) < 12:
-            st.warning(f"⚠️ **Attention :** Seulement {len(df_filtered)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
-        
+    
+    # Warning si moins de 12 mois
+    if len(df_filtered) < 12:
+        st.warning(f"⚠️ **Attention :** Seulement {len(df_filtered)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
+    
     all_models = []
     
     # Conversion et tri des données
@@ -1912,7 +1913,6 @@ if df is not None and lancer_calcul and selected_vars:
         st.info(f"📊 **Analyse sur période sélectionnée** : {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}")
         
         # Vérification données suffisantes
-        # Vérification du nombre d'observations
         if len(df_filtered) < 10:
             st.error("❌ **Données insuffisantes** pour l'analyse (minimum 10 points)")
             st.stop()
@@ -2468,25 +2468,22 @@ if df is not None and lancer_calcul and selected_vars:
         # Score IPMVP
         ax.annotate(f"Score IPMVP = {best_metrics['ipmvp_score']:.1f}/100", 
                    xy=(0.02, 0.98), xycoords='axes fraction',
-                   fontsize=14, fontweight='bold', color='#00485F',
+                   fontsize=13, fontweight='bold', color='#00485F',
                    bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9),
                    verticalalignment='top')
         
         # R² et CV(RMSE)
-        metrics_text = f"R² = {best_metrics['r2']:.3f}
-CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+        metrics_text = f"R² = {best_metrics['r2']:.3f} | CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
         if best_metrics.get('mode') == 'train_test':
-            metrics_text += f"
-(Test Set)"
+            metrics_text += "\n(Mesuré sur Test Set)"
         ax.annotate(metrics_text, 
-                   xy=(0.02, 0.85), xycoords='axes fraction',
-                   fontsize=11, fontweight='bold', color='#00485F',
-                   bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9))
+                   xy=(0.02, 0.88), xycoords='axes fraction',
+                   fontsize=11, color='#00485F',
+                   bbox=dict(boxstyle="round,pad=0.4", facecolor="#E7DDD9", edgecolor="#6DBABC", alpha=0.85),
+                   verticalalignment='top')
         
-        
-        # Ajout du nombre total de valeurs
-        total_values_text = f"Total: {len(y_all)} valeurs"
-        ax.text(0.98, 0.02, total_values_text,
+        # Nombre total de valeurs
+        ax.text(0.98, 0.02, f"Total: {len(y_all)} valeurs",
                transform=ax.transAxes,
                fontsize=10, color='#00485F',
                bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#6DBABC", alpha=0.8),
@@ -2521,18 +2518,17 @@ CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
             ax2.grid(True, linestyle='--', alpha=0.3)
             
             # Annotation
-            # Annotation enrichie du graphique de dispersion
+            # Annotation enrichie
         if best_metrics.get('mode') == 'train_test':
-            metrics_text = f"R² (Test) = {best_metrics['r2']:.4f}
-CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+            metrics_text = f"R² (Test) = {best_metrics['r2']:.4f}\nCV(RMSE) = {best_metrics['cv_rmse']:.3f}"
         else:
-            metrics_text = f"R² = {best_metrics['r2']:.4f}
-CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
+            metrics_text = f"R² = {best_metrics['r2']:.4f}\nCV(RMSE) = {best_metrics['cv_rmse']:.3f}"
         ax2.annotate(metrics_text, xy=(0.05, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
+                        fontsize=11, fontweight='bold', color='#00485F',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8),
+                        verticalalignment='top')
             
-            st.pyplot(fig2)
+        st.pyplot(fig2)
         
         with col2:
             # Analyse des résidus
@@ -2817,8 +2813,8 @@ st.markdown("""
         <li>✅ Mode train/test adaptatif</li>
         <li>✅ Limitations sécurité (règle 10:1)</li>
         <li>✅ Métriques enrichies et visualisations améliorées</li>
-        <li>✅ Affichage détaillé des intervalles train/test</li>
-        <li>✅ R² et CV(RMSE) sur tous les graphiques</li>
+        <li>✅ Affichage détaillé des intervalles train/test avec dates</li>
+        <li>✅ R² et CV(RMSE) visibles sur tous les graphiques</li>
         <li>✅ Ridge/Lasso retrouvent leur utilité</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
