@@ -2232,11 +2232,12 @@ if df is not None and lancer_calcul and selected_vars:
             </div>
             """, unsafe_allow_html=True)
         
-        # Affichage des périodes si mode train/test
+        # Affichage des périodes d'analyse
+        st.markdown("---")
+        st.subheader("📅 Périodes d'analyse")
+        
         if best_metrics.get('mode') == 'train_test':
-            st.markdown("---")
-            st.subheader("📅 Périodes d'analyse")
-            
+            # Mode Train/Test : afficher les deux périodes
             train_df_temp, test_df_temp, split_date_temp = create_train_test_split(df_filtered, date_col)
             
             col_train, col_test = st.columns(2)
@@ -2261,6 +2262,20 @@ if df is not None and lancer_calcul and selected_vars:
                     <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~6 mois</p>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            # Mode Standard : afficher la période complète
+            st.markdown(f"""
+            <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
+                <h4 style="color: #00485F; margin: 0 0 10px 0;">📅 PÉRIODE ANALYSÉE</h4>
+                <p style="margin: 5px 0;"><strong>📅 Du :</strong> {df_filtered[date_col].min().strftime('%d/%m/%Y')}</p>
+                <p style="margin: 5px 0;"><strong>📅 Au :</strong> {df_filtered[date_col].max().strftime('%d/%m/%Y')}</p>
+                <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(df_filtered)} valeurs</p>
+                <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(df_filtered)} mois</p>
+                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">
+                    ℹ️ Mode standard (pas de validation train/test car < 18 mois de données)
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col4:
             st.markdown(f"""
@@ -2304,7 +2319,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <tr><th>Métrique</th><th>Valeur Train</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination sur les données d'entraînement")}</td><td>{best_metrics.get('train_r2', 0):.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur l'entraînement")}</td><td>{best_metrics.get('train_cv_rmse', 0):.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur l'entraînement")}</td><td>{best_metrics.get('train_bias', 0):.2f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur l'entraînement")}</td><td>{best_metrics.get('train_bias', 0):.5f}</td></tr>
                 </table>
                 """
                 st.markdown(train_metrics, unsafe_allow_html=True)
@@ -2315,7 +2330,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <tr><th>Métrique</th><th>Valeur Test</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination sur les données de test (validation)")}</td><td>{best_metrics['r2']:.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur le test")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur le test")}</td><td>{best_metrics['bias']:.2f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur le test")}</td><td>{best_metrics['bias']:.5f}</td></tr>
                 </table>
                 """
                 st.markdown(test_metrics, unsafe_allow_html=True)
@@ -2339,7 +2354,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <tr><th>Métrique</th><th>Valeur</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.2f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.5f}</td></tr>
                 </table>
                 """
                 st.markdown(standard_metrics, unsafe_allow_html=True)
