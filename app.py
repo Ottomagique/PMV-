@@ -1,6 +1,6 @@
 # =============================================================================
 # PARTIE 1 : BASE + AUTHENTIFICATION
-# Application IPMVP Améliorée - Version 2.1 - Visualisations enrichies
+# Application IPMVP Améliorée - Version 2.2 - Scoring IPMVP refondu
 # =============================================================================
 
 import streamlit as st
@@ -531,80 +531,121 @@ def detect_overfitting_intelligent(model_info, nb_observations):
 
 def calculate_ipmvp_score(model_info, nb_observations):
     """
-    Calcule un score composite IPMVP de 0 à 100 points
+    Calcule le score IPMVP selon les nouveaux critères (60 points max)
+    
+    R² : 30 points max (0.75 = 1pt, 1.00 = 30pts)
+    CV(RMSE) : 30 points max (0.20 = 1pt, 0.00 = 30pts)
+    T-stats : 10 points max (|t| = 2 → 2pts, |t| ≥ 5 → 10pts)
+    
+    TOTAL : 60 points maximum
     """
     r2 = model_info['r2']
     cv_rmse = model_info['cv_rmse']
-    bias = abs(model_info['bias'])
-    nb_variables = len(model_info['features'])
     model_type = model_info['model_type']
     
-    # Score de base (60 points max)
-    # R² : 30 points max
-    r2_score = min(r2 / 0.75, 1.0) * 30 if r2 >= 0.5 else r2 * 20
+    # =================================================================
+    # 1. SCORE R² (30 points max)
+    # =================================================================
+    # R² = 0.75 → 1 pt
+    # R² = 1.00 → 30 pts
+    # Échelle linéaire
     
-    # CV(RMSE) : 20 points max (inversé - plus faible = mieux)
-    cv_score = max(0, min((0.25 - cv_rmse) / 0.25, 1.0)) * 20
+    if r2 >= 1.0:
+        r2_score = 30.0
+    elif r2 <= 0.75:
+        r2_score = max(0, (r2 / 0.75))  # En dessous de 0.75, score proportionnel
+    else:
+        # Interpolation linéaire entre 0.75 et 1.00
+        r2_score = 1 + ((r2 - 0.75) / (1.0 - 0.75)) * 29
     
-    # Biais : 10 points max
-    bias_score = max(0, min((10 - bias) / 10, 1.0)) * 10
+    # =================================================================
+    # 2. SCORE CV(RMSE) (30 points max)
+    # =================================================================
+    # CV(RMSE) = 0.20 → 1 pt
+    # CV(RMSE) = 0.00 → 30 pts
+    # Échelle linéaire inversée
     
-    base_score = r2_score + cv_score + bias_score
+    if cv_rmse <= 0.0:
+        cv_score = 30.0
+    elif cv_rmse >= 0.20:
+        cv_score = max(0, 1 - (cv_rmse - 0.20) * 2)  # Au-dessus de 0.20, décroissance rapide
+    else:
+        # Interpolation linéaire entre 0.00 et 0.20
+        cv_score = 30 - (cv_rmse / 0.20) * 29
     
-    # Bonus/Malus (40 points max)
-    bonus_malus = 0
+    # =================================================================
+    # 3. SCORE SIGNIFICATIVITÉ T-STATS (10 points max)
+    # =================================================================
+    # |t| = 2 → 2 pts
+    # |t| ≥ 5 → 10 pts
+    # Échelle linéaire
     
-    # Bonus simplicité (15 points max)
-    if nb_variables == 1:
-        bonus_malus += 15
-    elif nb_variables == 2:
-        bonus_malus += 10
-    elif nb_variables == 3:
-        bonus_malus += 5
+    t_score = 0
     
-    # Bonus conformité IPMVP (15 points max)
-    if r2 >= 0.75 and cv_rmse <= 0.15 and bias <= 5:
-        bonus_malus += 15
-    elif r2 >= 0.6 and cv_rmse <= 0.2 and bias <= 8:
-        bonus_malus += 10
-    elif r2 >= 0.5 and cv_rmse <= 0.25:
-        bonus_malus += 5
-    
-    # Bonus significativité statistique (10 points max)
     if 't_stats' in model_info and model_type in ["Linéaire", "Ridge", "Lasso"]:
-        significant_vars = 0
         total_vars = 0
+        total_t_score = 0
+        
         for feature in model_info['features']:
             if (feature in model_info['t_stats'] and 
                 model_info['t_stats'][feature] is not None):
+                
+                t_stat = model_info['t_stats'][feature]
+                
+                # Extraire la valeur t
+                if isinstance(t_stat, dict) and 't_value' in t_stat:
+                    t_value = abs(t_stat['t_value'])
+                elif isinstance(t_stat, (int, float)):
+                    t_value = abs(t_stat)
+                else:
+                    continue
+                
                 total_vars += 1
-                t_val = model_info['t_stats'][feature]
-                if isinstance(t_val, dict) and 't_value' in t_val:
-                    if abs(t_val['t_value']) > 2:
-                        significant_vars += 1
-                elif isinstance(t_val, (int, float)) and abs(t_val) > 2:
-                    significant_vars += 1
+                
+                # Calcul du score pour cette variable
+                if t_value >= 5.0:
+                    var_t_score = 10.0
+                elif t_value <= 2.0:
+                    var_t_score = max(0, (t_value / 2.0) * 2)  # En dessous de 2, score proportionnel
+                else:
+                    # Interpolation linéaire entre 2 et 5
+                    var_t_score = 2 + ((t_value - 2.0) / (5.0 - 2.0)) * 8
+                
+                total_t_score += var_t_score
         
+        # Moyenne des scores t
         if total_vars > 0:
-            sig_ratio = significant_vars / total_vars
-            bonus_malus += sig_ratio * 10
+            t_score = total_t_score / total_vars
     
-    # Malus overfitting
-    is_overfitted, _, severity = detect_overfitting_intelligent(model_info, nb_observations)
-    if is_overfitted:
-        if severity == "error":
-            bonus_malus -= 30  # Gros malus
-        else:
-            bonus_malus -= 15  # Malus modéré
-    
-    # Malus modèle complexe
-    if model_type == "Polynomiale":
-        bonus_malus -= 5
-    
-    # Score final (0-100)
-    final_score = max(0, min(100, base_score + bonus_malus))
+    # =================================================================
+    # SCORE FINAL (0-60 points)
+    # =================================================================
+    final_score = r2_score + cv_score + t_score
+    final_score = max(0, min(60, final_score))  # Borner entre 0 et 60
     
     return final_score
+
+def get_ipmvp_qualification(score):
+    """
+    Convertit le score IPMVP (0-60) en qualification textuelle
+    
+    Excellent : ≥ 55/60
+    Très bon : 45-54/60
+    Bon : 35-44/60
+    Correct : 25-34/60
+    Non conforme : < 25/60
+    """
+    if score >= 55:
+        return "Excellent", "excellent", "#4caf50"  # Vert foncé
+    elif score >= 45:
+        return "Très bon", "very_good", "#96B91D"  # Vert clair
+    elif score >= 35:
+        return "Bon", "good", "#6DBABC"  # Bleu-vert
+    elif score >= 25:
+        return "Correct", "fair", "#ff9800"  # Orange
+    else:
+        return "Non conforme", "non_compliant", "#f44336"  # Rouge
+
 
 def validate_data_quality(df, date_col, conso_col, selected_vars):
     """
@@ -648,7 +689,7 @@ def validate_data_quality(df, date_col, conso_col, selected_vars):
     if len(df) < 12:
         issues.append(f"❌ Données insuffisantes: {len(df)} points (minimum 12 requis)")
     elif len(df) < 24:
-        warnings.append(f"⚠️ Données limitées: {len(df)} points (24+ recommandés pour train/test)")
+        warnings.append(f"⚠️ Données limitées: {len(df)} points (18+ recommandés pour train/test)")
     
     return issues, warnings
 
@@ -747,21 +788,21 @@ def should_use_train_test_split(nb_observations):
     """
     Détermine si on doit utiliser un split train/test
     """
-    if nb_observations >= 24:
+    if nb_observations >= 18:
         return True, "🚀 Mode validation robuste: Split train/test activé"
     elif nb_observations >= 18:
-        return False, f"⚠️ {nb_observations} mois disponibles - Split train/test recommandé avec ≥24 mois"
+        return False, f"⚠️ {nb_observations} mois disponibles - Split train/test recommandé avec ≥18 mois"
     else:
         return False, f"📋 Mode IPMVP standard avec {nb_observations} mois de données"
 
-def create_train_test_split(df, date_col, train_months=18):
+def create_train_test_split(df, date_col, train_months=12):
     """
     Crée un split train/test temporel pour les données IPMVP
     """
     # Trier par date
     df_sorted = df.sort_values(by=date_col)
     
-    # Calculer le point de coupure (18 premiers mois pour train)
+    # Calculer le point de coupure (12 premiers mois pour train)
     min_date = df_sorted[date_col].min()
     split_date = min_date + pd.DateOffset(months=train_months)
     
@@ -1187,7 +1228,7 @@ st.markdown("""
 <ul>
     <li><strong>🛡️ Détection d'overfitting intelligente</strong> : Rejet automatique des modèles avec R² artificiellement gonflé</li>
     <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-100 points (R² + CV(RMSE) + simplicité + significativité)</li>
-    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique 18/6 mois si ≥24 mois de données</li>
+    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique 18/6 mois si ≥18 mois de données</li>
     <li><strong>⚠️ Limitations sécurité</strong> : Contrôle du ratio observations/variables (règle 10:1)</li>
     <li><strong>📊 Métriques enrichies</strong> : Comparaison train/test, valeurs t de Student, warnings intelligents</li>
 </ul>
@@ -1197,7 +1238,7 @@ st.markdown("""
     <li><strong>Validation des données</strong> : Vérification qualité, détection anomalies</li>
     <li><strong>Mode adaptatif</strong> : 
         <ul>
-            <li>≥24 mois → Mode "Validation robuste" avec train/test</li>
+            <li>≥18 mois → Mode "Validation robuste" avec train/test</li>
             <li>12-23 mois → Mode "IPMVP standard" avec protections renforcées</li>
         </ul>
     </li>
@@ -1367,7 +1408,7 @@ if df is not None and date_col:
         st.sidebar.markdown(f"""
         <div class="mode-indicator" style="background-color: rgba(150, 185, 29, 0.1); border-color: #96B91D;">
             <div class="mode-title">🚀 Mode Validation Robuste</div>
-            <p>Split train/test automatique (18/6 mois)<br>
+            <p>Split train/test automatique (12/6 mois)<br>
             Évaluation sur données non-vues</p>
         </div>
         """, unsafe_allow_html=True)
@@ -1475,18 +1516,20 @@ elif model_type == "Polynomiale":
 # INFORMATIONS SUR LA CONFORMITÉ IPMVP ENRICHIES
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
-### ✅ Critères IPMVP Améliorés
-{tooltip("Score Composite", "Le nouveau système évalue les modèles sur un score 0-100 points combinant performance statistique, conformité IPMVP et simplicité. Fini le tri par R² seul !")}
+### ✅ Critères IPMVP v2.2
+{tooltip("Qualification IPMVP", "Système de notation sur 60 points : R² (30pts) + CV(RMSE) (30pts) + Significativité (10pts)")}
 
-**📊 Critères principaux :**
-- **R² ≥ 0.75** : Corrélation excellente
-- **CV(RMSE) ≤ 15%** : Précision excellente  
-- **|Biais| < 5%** : Ajustement équilibré
+**📊 Scoring (60 points max) :**
+- **R²** : 0.75 = 1pt → 1.00 = 30pts
+- **CV(RMSE)** : 0.20 = 1pt → 0.00 = 30pts  
+- **T-stats** : |t|=2 = 2pts → |t|≥5 = 10pts
 
-**🎯 Nouveaux critères :**
-- **Significativité** : |t| > 2 (p-value < 0.05)
-- **Ratio obs/var** : ≥10:1 (protection overfitting)
-- **Simplicité** : Moins de variables = meilleur score
+**🎯 Qualifications :**
+- **Excellent** : ≥ 55/60 points
+- **Très bon** : 45-54/60 points
+- **Bon** : 35-44/60 points
+- **Correct** : 25-34/60 points
+- **Non conforme** : < 25/60 points
 """, unsafe_allow_html=True)
 
 # INFORMATIONS SUR LES MODÈLES AVEC AMÉLIORATIONS
@@ -1607,7 +1650,7 @@ if df is not None and lancer_calcul and selected_vars:
         with progress_container:
             progress_bar = st.progress(0)
             progress_text = st.empty()
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
             with col1:
                 current_period = st.empty()
             with col2:
@@ -2158,10 +2201,13 @@ if df is not None and lancer_calcul and selected_vars:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
+            qualification, qual_class, qual_color = get_ipmvp_qualification(best_metrics['ipmvp_score'])
+            
             st.markdown(f"""
-            <div class="score-card">
-                <div class="score-value">{best_metrics['ipmvp_score']:.1f}</div>
-                <div class="score-label">Score IPMVP</div>
+            <div class="score-card" style="background: linear-gradient(135deg, {qual_color} 0%, {qual_color}dd 100%);">
+                <div class="score-value">{qualification}</div>
+                <div class="score-label">Qualification IPMVP</div>
+                <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_metrics['ipmvp_score']:.1f}/60 points</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -2209,7 +2255,7 @@ if df is not None and lancer_calcul and selected_vars:
             st.markdown("""
             <div class="comparison-grid">
                 <div class="train-card">
-                    <h4>🎯 Entraînement (18 mois)</h4>
+                    <h4>🎯 Entraînement (12 mois)</h4>
                 </div>
                 <div class="test-card">
                     <h4>🧪 Test (6 mois)</h4>
@@ -2575,9 +2621,11 @@ if df is not None and lancer_calcul and selected_vars:
                 # Classe de conformité pour le style
                 conformity_class = f"conformity-{model['classe']}"
                 
+                qual, _, _ = get_ipmvp_qualification(model['ipmvp_score'])
                 model_row = {
                     "🏆": f"{i+1}",
-                    "Score": f"**{model['ipmvp_score']:.1f}**/100",
+                    "Score": f"**{model['ipmvp_score']:.1f}**/60",
+                    "Qualification": qual,
                     "Mode": mode_icon,
                     "Type": model['model_name'][:20] + ("..." if len(model['model_name']) > 20 else ""),
                     "Variables": ", ".join(model['features'][:2]) + ("..." if len(model['features']) > 2 else ""),
@@ -2644,15 +2692,23 @@ if df is not None and lancer_calcul and selected_vars:
             st.markdown(f"""
             ### 🔍 Analyse de votre modèle
             
-            **🏆 Score obtenu :** {best_metrics['ipmvp_score']:.1f}/100
-            - 90-100 : Excellent modèle, très robuste
-            - 70-89 : Bon modèle, fiable pour IPMVP
-            - 50-69 : Modèle acceptable, à surveiller
-            - <50 : Modèle insuffisant, révision nécessaire
+            **🏆 Qualification obtenue :** {qualification} ({best_metrics['ipmvp_score']:.1f}/60 points)
+            
+            **Échelle de notation :**
+            - **Excellent** (≥55/60) : Modèle très robuste, hautement conforme IPMVP
+            - **Très bon** (45-54/60) : Modèle fiable et robuste pour M&V
+            - **Bon** (35-44/60) : Modèle valide avec améliorations possibles
+            - **Correct** (25-34/60) : Modèle acceptable, révision recommandée
+            - **Non conforme** (<25/60) : Modèle insuffisant, révision majeure requise
+            
+            **Composition du score :**
+            - R² : 30 points max (seuil IPMVP : 0.75)
+            - CV(RMSE) : 30 points max (seuil IPMVP : 0.20 soit 20%)
+            - Significativité (t-stats) : 10 points max (seuil : |t| ≥ 2)
             
             **📊 Mode d'analyse :** {best_metrics.get('mode', 'standard').title()}
             {'- Validation sur données non-vues (train/test)' if best_metrics.get('mode') == 'train_test' else '- Analyse sur toutes les données disponibles'}
-            {'- Plus robuste mais nécessite ≥24 mois' if best_metrics.get('mode') == 'train_test' else '- Standard IPMVP avec protections renforcées'}
+            {'- Plus robuste mais nécessite ≥18 mois' if best_metrics.get('mode') == 'train_test' else '- Standard IPMVP avec protections renforcées'}
             
             **🧮 Type de modèle :** {best_metrics['model_name']}
             - Linéaire : Simple et interprétable
@@ -2719,22 +2775,18 @@ if df is not None and lancer_calcul and selected_vars:
         st.subheader("📋 Résumé exécutif")
         
         # Détermination du statut global
-        if best_metrics['ipmvp_score'] >= 80 and best_metrics['conformite'] == 'Excellente':
-            status = "✅ **MODÈLE EXCELLENT**"
-            status_color = "#4caf50"
-            status_msg = "Modèle hautement fiable, conforme aux standards IPMVP les plus exigeants."
-        elif best_metrics['ipmvp_score'] >= 60 and best_metrics['conformite'] in ['Excellente', 'Bonne']:
-            status = "✅ **MODÈLE ACCEPTABLE**"
-            status_color = "#2196f3"
-            status_msg = "Modèle valide pour utilisation IPMVP avec quelques améliorations possibles."
-        elif best_metrics['ipmvp_score'] >= 40:
-            status = "⚠️ **MODÈLE À AMÉLIORER**"
-            status_color = "#ff9800"
-            status_msg = "Modèle présentant des limitations, révision recommandée avant utilisation."
-        else:
-            status = "❌ **MODÈLE INSUFFISANT**"
-            status_color = "#f44336"
-            status_msg = "Modèle non conforme aux standards IPMVP, révision majeure nécessaire."
+        qualification, qual_class, status_color = get_ipmvp_qualification(best_metrics['ipmvp_score'])
+        
+        # Messages selon la qualification
+        status_messages = {
+            "Excellent": ("✅ **MODÈLE EXCELLENT**", "Modèle hautement fiable, conforme aux standards IPMVP les plus exigeants."),
+            "Très bon": ("✅ **MODÈLE TRÈS BON**", "Modèle fiable et robuste, parfaitement adapté aux calculs M&V selon IPMVP."),
+            "Bon": ("✅ **MODÈLE BON**", "Modèle valide pour utilisation IPMVP avec quelques améliorations possibles."),
+            "Correct": ("⚠️ **MODÈLE CORRECT**", "Modèle acceptable mais présentant des limitations, révision recommandée."),
+            "Non conforme": ("❌ **MODÈLE NON CONFORME**", "Modèle ne respectant pas les standards IPMVP, révision majeure nécessaire.")
+        }
+        
+        status, status_msg = status_messages.get(qualification, status_messages["Non conforme"])
         
         # Affichage du résumé avec composants natifs Streamlit (plus fiable)
         st.markdown(f"### {status}")
@@ -2744,10 +2796,12 @@ if df is not None and lancer_calcul and selected_vars:
         col1, col2, col3 = st.columns(3)
         
         with col1:
+            qualification, qual_class, qual_color = get_ipmvp_qualification(best_metrics['ipmvp_score'])
             st.metric(
-                label="🏆 Score IPMVP",
-                value=f"{best_metrics['ipmvp_score']:.1f}/100",
-                help="Score composite évaluant performance, conformité IPMVP et simplicité"
+                label="🏆 Qualification IPMVP",
+                value=qualification,
+                delta=f"{best_metrics['ipmvp_score']:.1f}/60 pts",
+                help="Qualification basée sur R², CV(RMSE) et significativité statistique"
             )
             st.metric(
                 label="📊 R²",
@@ -2825,7 +2879,7 @@ elif df is None:
     ### ✨ **Nouveautés de cette version :**
     - **🛡️ Protection anti-overfitting** : Fini les R² artificiels à 99% !
     - **🎯 Score composite** : Évaluation holistique remplaçant le tri par R² seul
-    - **🚀 Mode train/test** : Validation robuste si ≥24 mois de données
+    - **🚀 Mode train/test** : Validation robuste si ≥18 mois de données
     - **⚠️ Limitations intelligentes** : Contrôle automatique du ratio observations/variables
     - **📊 Métriques enrichies** : Significativité statistique, comparaisons train/test
     """)
@@ -2834,7 +2888,7 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.1 - Visualisations enrichies ! 🎉</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.2 - Scoring IPMVP refondu ! 🎉</strong></p>
     <p><strong>🔧 Améliorations intégrées :</strong></p>
     <ul style="text-align: left; display: inline-block;">
         <li>✅ Détection overfitting intelligente</li>
