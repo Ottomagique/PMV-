@@ -2248,7 +2248,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <p style="margin: 5px 0;"><strong>📅 Du :</strong> {train_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
                     <p style="margin: 5px 0;"><strong>📅 Au :</strong> {train_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
                     <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(train_df_temp)} valeurs</p>
-                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~12 mois</p>
+                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(train_df_temp)} mois ({round((train_df_temp[date_col].max() - train_df_temp[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -2259,7 +2259,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <p style="margin: 5px 0;"><strong>📅 Du :</strong> {test_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
                     <p style="margin: 5px 0;"><strong>📅 Au :</strong> {test_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
                     <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(test_df_temp)} valeurs</p>
-                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~6 mois</p>
+                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(test_df_temp)} mois ({round((test_df_temp[date_col].max() - test_df_temp[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -2270,7 +2270,7 @@ if df is not None and lancer_calcul and selected_vars:
                 <p style="margin: 5px 0;"><strong>📅 Du :</strong> {df_filtered[date_col].min().strftime('%d/%m/%Y')}</p>
                 <p style="margin: 5px 0;"><strong>📅 Au :</strong> {df_filtered[date_col].max().strftime('%d/%m/%Y')}</p>
                 <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(df_filtered)} valeurs</p>
-                <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(df_filtered)} mois</p>
+                <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(df_filtered)} mois ({round((df_filtered[date_col].max() - df_filtered[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
                 <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">
                     ℹ️ Mode standard (pas de validation train/test car < 18 mois de données)
                 </p>
