@@ -2300,13 +2300,18 @@ if df is not None and lancer_calcul and selected_vars:
         
         if best_metrics.get('mode') == 'train_test':
             # Affichage train/test côte à côte
-            st.markdown("""
+            # Calculer les durées réelles
+            train_df_display, test_df_display, _ = create_train_test_split(df_filtered, date_col)
+            train_duration = len(train_df_display)
+            test_duration = len(test_df_display)
+            
+            st.markdown(f"""
             <div class="comparison-grid">
                 <div class="train-card">
-                    <h4>🎯 Entraînement (12 mois)</h4>
+                    <h4>🎯 Entraînement ({train_duration} mois)</h4>
                 </div>
                 <div class="test-card">
-                    <h4>🧪 Test (6 mois)</h4>
+                    <h4>🧪 Test ({test_duration} mois)</h4>
                 </div>
             </div>
             """, unsafe_allow_html=True)
