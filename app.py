@@ -1707,7 +1707,7 @@ if df is not None and lancer_calcul and selected_vars:
                     X_subset = X[list(combo)]
                     
                     # Split train/test si applicable
-                    if use_train_test and len(period_df) >= 24:
+                    if use_train_test and len(period_df) >= 18:
                         train_df, test_df, split_date = create_train_test_split(period_df, date_col)
                         X_train = train_df[list(combo)]
                         y_train = train_df[conso_col]
@@ -2007,7 +2007,7 @@ if df is not None and lancer_calcul and selected_vars:
                 X_subset = X[list(combo)]
                 
                 # Split train/test si applicable
-                if use_train_test and len(df_filtered) >= 24:
+                if use_train_test and len(df_filtered) >= 18:
                     train_df, test_df, split_date = create_train_test_split(df_filtered, date_col)
                     X_train = train_df[list(combo)]
                     y_train = train_df[conso_col]
@@ -2787,7 +2787,7 @@ if df is not None and lancer_calcul and selected_vars:
             if best_metrics.get('overfitting_warning'):
                 recommendations.append("⚠️ **Risque d'overfitting** : " + best_metrics['overfitting_warning'])
             
-            if best_metrics.get('mode') == 'standard' and len(df_filtered) >= 24:
+            if best_metrics.get('mode') == 'standard' and len(df_filtered) >= 18:
                 recommendations.append("🚀 **Amélioration possible** : Vous avez assez de données pour le mode train/test (validation robuste)")
             
             # Analyse de la significativité
