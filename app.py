@@ -1650,7 +1650,7 @@ if df is not None and lancer_calcul and selected_vars:
         with progress_container:
             progress_bar = st.progress(0)
             progress_text = st.empty()
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 current_period = st.empty()
             with col2:
@@ -1924,13 +1924,16 @@ if df is not None and lancer_calcul and selected_vars:
             if len(best_period_data) < 12:
                 st.warning(f"⚠️ **Attention :** Seulement {len(best_period_data)} observations disponibles. L'IPMVP recommande au minimum 12 mois de données pour une baseline fiable.")
             
-            # Affichage du score composite
+            # Affichage de la qualification
+            qualification, qual_class, qual_color = get_ipmvp_qualification(best_period_score)
+            
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown(f"""
-                <div class="score-card">
-                    <div class="score-value">{best_period_score:.1f}</div>
-                    <div class="score-label">Score IPMVP</div>
+                <div class="score-card" style="background: linear-gradient(135deg, {qual_color} 0%, {qual_color}dd 100%);">
+                    <div class="score-value">{qualification}</div>
+                    <div class="score-label">Qualification IPMVP</div>
+                    <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_period_score:.1f}/60 points</div>
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
