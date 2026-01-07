@@ -531,13 +531,13 @@ def detect_overfitting_intelligent(model_info, nb_observations):
 
 def calculate_ipmvp_score(model_info, nb_observations):
     """
-    Calcule le score IPMVP selon les nouveaux critères (60 points max)
+    Calcule le score IPMVP selon les nouveaux critères (70 points max)
     
     R² : 30 points max (0.75 = 1pt, 1.00 = 30pts)
     CV(RMSE) : 30 points max (0.20 = 1pt, 0.00 = 30pts)
     T-stats : 10 points max (|t| = 2 → 2pts, |t| ≥ 5 → 10pts)
     
-    TOTAL : 60 points maximum
+    TOTAL : 70 points maximum
     """
     r2 = model_info['r2']
     cv_rmse = model_info['cv_rmse']
@@ -618,16 +618,16 @@ def calculate_ipmvp_score(model_info, nb_observations):
             t_score = total_t_score / total_vars
     
     # =================================================================
-    # SCORE FINAL (0-60 points)
+    # SCORE FINAL (0-70 points)
     # =================================================================
     final_score = r2_score + cv_score + t_score
-    final_score = max(0, min(60, final_score))  # Borner entre 0 et 60
+    final_score = max(0, min(70, final_score))  # Borner entre 0 et 60
     
     return final_score
 
 def get_ipmvp_qualification(score):
     """
-    Convertit le score IPMVP (0-60) en qualification textuelle
+    Convertit le score IPMVP (0-70) en qualification textuelle
     
     Excellent : ≥ 55/60
     Très bon : 45-54/60
@@ -1227,7 +1227,7 @@ st.markdown("""
 <h4>📋 Nouveautés de cette version :</h4>
 <ul>
     <li><strong>🛡️ Détection d'overfitting intelligente</strong> : Rejet automatique des modèles avec R² artificiellement gonflé</li>
-    <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-100 points (R² + CV(RMSE) + simplicité + significativité)</li>
+    <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-70 points (R² + CV(RMSE) + simplicité + significativité)</li>
     <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique 18/6 mois si ≥18 mois de données</li>
     <li><strong>⚠️ Limitations sécurité</strong> : Contrôle du ratio observations/variables (règle 10:1)</li>
     <li><strong>📊 Métriques enrichies</strong> : Comparaison train/test, valeurs t de Student, warnings intelligents</li>
@@ -1517,19 +1517,19 @@ elif model_type == "Polynomiale":
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
 ### ✅ Critères IPMVP v2.2
-{tooltip("Qualification IPMVP", "Système de notation sur 60 points : R² (30pts) + CV(RMSE) (30pts) + Significativité (10pts)")}
+{tooltip("Qualification IPMVP", "Système de notation sur 70 points : R² (30pts) + CV(RMSE) (30pts) + Significativité (10pts)")}
 
-**📊 Scoring (60 points max) :**
+**📊 Scoring (70 points max) :**
 - **R²** : 0.75 = 1pt → 1.00 = 30pts
 - **CV(RMSE)** : 0.20 = 1pt → 0.00 = 30pts  
 - **T-stats** : |t|=2 = 2pts → |t|≥5 = 10pts
 
 **🎯 Qualifications :**
-- **Excellent** : ≥ 55/60 points
-- **Très bon** : 45-54/60 points
-- **Bon** : 35-44/60 points
-- **Correct** : 25-34/60 points
-- **Non conforme** : < 25/60 points
+- **Excellent** : ≥ 55/70 points
+- **Très bon** : 45-54/70 points
+- **Bon** : 35-44/70 points
+- **Correct** : 25-34/70 points
+- **Non conforme** : < 25/70 points
 """, unsafe_allow_html=True)
 
 # INFORMATIONS SUR LES MODÈLES AVEC AMÉLIORATIONS
@@ -1933,7 +1933,7 @@ if df is not None and lancer_calcul and selected_vars:
                 <div class="score-card" style="background: linear-gradient(135deg, {qual_color} 0%, {qual_color}dd 100%);">
                     <div class="score-value">{qualification}</div>
                     <div class="score-label">Qualification IPMVP</div>
-                    <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_period_score:.1f}/60 points</div>
+                    <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_period_score:.1f}/70 points</div>
                 </div>
                 """, unsafe_allow_html=True)
             with col2:
@@ -2210,7 +2210,7 @@ if df is not None and lancer_calcul and selected_vars:
             <div class="score-card" style="background: linear-gradient(135deg, {qual_color} 0%, {qual_color}dd 100%);">
                 <div class="score-value">{qualification}</div>
                 <div class="score-label">Qualification IPMVP</div>
-                <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_metrics['ipmvp_score']:.1f}/60 points</div>
+                <div style="font-size: 0.9em; margin-top: 5px; opacity: 0.9;">{best_metrics['ipmvp_score']:.1f}/70 points</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -2231,6 +2231,36 @@ if df is not None and lancer_calcul and selected_vars:
                 <p><strong>{mode_info}</strong></p>
             </div>
             """, unsafe_allow_html=True)
+        
+        # Affichage des périodes si mode train/test
+        if best_metrics.get('mode') == 'train_test':
+            st.markdown("---")
+            st.subheader("📅 Périodes d'analyse")
+            
+            train_df_temp, test_df_temp, split_date_temp = create_train_test_split(df_filtered, date_col)
+            
+            col_train, col_test = st.columns(2)
+            with col_train:
+                st.markdown(f"""
+                <div style="background-color: rgba(150, 185, 29, 0.1); border-left: 4px solid #96B91D; padding: 15px; border-radius: 8px;">
+                    <h4 style="color: #96B91D; margin: 0 0 10px 0;">🎯 PÉRIODE D'ENTRAÎNEMENT</h4>
+                    <p style="margin: 5px 0;"><strong>📅 Du :</strong> {train_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 5px 0;"><strong>📅 Au :</strong> {train_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(train_df_temp)} valeurs</p>
+                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~12 mois</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_test:
+                st.markdown(f"""
+                <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
+                    <h4 style="color: #6DBABC; margin: 0 0 10px 0;">🧪 PÉRIODE DE TEST</h4>
+                    <p style="margin: 5px 0;"><strong>📅 Du :</strong> {test_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 5px 0;"><strong>📅 Au :</strong> {test_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(test_df_temp)} valeurs</p>
+                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~6 mois</p>
+                </div>
+                """, unsafe_allow_html=True)
         
         with col4:
             st.markdown(f"""
@@ -2308,10 +2338,8 @@ if df is not None and lancer_calcul and selected_vars:
                 <table class="stats-table">
                     <tr><th>Métrique</th><th>Valeur</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td></tr>
-                    <tr><td>{tooltip("RMSE", "Root Mean Square Error : écart-type des résidus")}</td><td>{best_metrics['rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE en pourcentage de la moyenne")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("MAE", "Mean Absolute Error : erreur absolue moyenne")}</td><td>{best_metrics['mae']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle en pourcentage")}</td><td>{best_metrics['bias']:.2f}</td></tr>
+                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.2f}</td></tr>
                 </table>
                 """
                 st.markdown(standard_metrics, unsafe_allow_html=True)
@@ -2672,7 +2700,7 @@ if df is not None and lancer_calcul and selected_vars:
             
             **🔄 Changement majeur :** Fini le tri par R² seul ! Le nouveau système utilise un score composite qui évalue :
             
-            #### 📊 Score de base (60 points max)
+            #### 📊 Score de base (70 points max)
             - **R² (30pts)** : Performance statistique, pondérée selon les seuils IPMVP
             - **CV(RMSE) (20pts)** : Précision du modèle (plus faible = mieux)
             - **Biais (10pts)** : Équilibre du modèle (proche de 0 = mieux)
@@ -2695,7 +2723,7 @@ if df is not None and lancer_calcul and selected_vars:
             st.markdown(f"""
             ### 🔍 Analyse de votre modèle
             
-            **🏆 Qualification obtenue :** {qualification} ({best_metrics['ipmvp_score']:.1f}/60 points)
+            **🏆 Qualification obtenue :** {qualification} ({best_metrics['ipmvp_score']:.1f}/70 points)
             
             **Échelle de notation :**
             - **Excellent** (≥55/60) : Modèle très robuste, hautement conforme IPMVP
@@ -2803,7 +2831,7 @@ if df is not None and lancer_calcul and selected_vars:
             st.metric(
                 label="🏆 Qualification IPMVP",
                 value=qualification,
-                delta=f"{best_metrics['ipmvp_score']:.1f}/60 pts",
+                delta=f"{best_metrics['ipmvp_score']:.1f}/70 pts",
                 help="Qualification basée sur R², CV(RMSE) et significativité statistique"
             )
             st.metric(
