@@ -1895,7 +1895,7 @@ if df is not None and lancer_calcul and selected_vars:
                                 period_best_model = model_info
                             
                             # Mise à jour affichage en temps réel
-                            current_score.metric("Score actuel", f"{ipmvp_score:.1f}/100")
+                            current_score.metric("Score actuel", f"{ipmvp_score:.1f}/70")
                             
                         except Exception as e:
                             continue
@@ -1909,7 +1909,7 @@ if df is not None and lancer_calcul and selected_vars:
                 best_period_metrics = period_best_model
                 best_period_name = period_name
                 
-                best_so_far.metric("Meilleur score", f"{best_period_score:.1f}/100")
+                best_so_far.metric("Meilleur score", f"{best_period_score:.1f}/70")
             
             # Mise à jour de la barre de progression
             progress_bar.progress((idx + 1) / len(date_ranges))
@@ -2544,7 +2544,7 @@ if df is not None and lancer_calcul and selected_vars:
         
         # Annotations enrichies
         # Score IPMVP
-        ax.annotate(f"Score IPMVP = {best_metrics['ipmvp_score']:.1f}/100", 
+        ax.annotate(f"Score IPMVP = {best_metrics['ipmvp_score']:.1f}/70", 
                    xy=(0.02, 0.98), xycoords='axes fraction',
                    fontsize=13, fontweight='bold', color='#00485F',
                    bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9),
