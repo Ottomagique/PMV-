@@ -2683,11 +2683,12 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             r2_gap = abs(train_r2_val - test_r2_val)
             gap_color = "#4caf50" if r2_gap < 0.10 else ("#ff9800" if r2_gap < 0.20 else "#f44336")
             gap_icon  = "✅" if r2_gap < 0.10 else ("⚠️" if r2_gap < 0.20 else "❌")
+            gap_label = "Excellent - pas d'overfitting" if r2_gap < 0.10 else ("Acceptable" if r2_gap < 0.20 else "Overfitting probable")
             st.markdown(f"""
             <div style="background:#f5f5f5; border-radius:8px; padding:10px 16px; margin-top:12px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
                 <span style="font-weight:bold; color:#00485F;">📊 Écart R² Train/Test :</span>
                 <span style="font-size:1.2em; font-weight:bold; color:{gap_color};">{gap_icon} {r2_gap:.4f}</span>
-                <span style="color:#666; font-size:0.9em;">({'Excellent — pas d\\'overfitting' if r2_gap < 0.10 else ('Acceptable' if r2_gap < 0.20 else 'Overfitting probable')})</span>
+                <span style="color:#666; font-size:0.9em;">({gap_label})</span>
                 <span style="color:#888; font-size:0.85em;">R² Train={train_r2_val:.4f} | R² Test={test_r2_val:.4f}</span>
             </div>
             """, unsafe_allow_html=True)
