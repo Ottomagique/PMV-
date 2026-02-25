@@ -1694,7 +1694,9 @@ if df is not None:
         nb_mois_total = len(df)
     
     max_train_months_possible = max(12, nb_mois_total - 1)
-    default_train = min(12, max_train_months_possible)
+    # Défaut intelligent : 2/3 des mois pour le train (ex: 24 mois → 16 train + 8 test)
+    # Minimum 12 mois (IPMVP baseline), maximum = max_train_months_possible
+    default_train = max(12, min(int(nb_mois_total * 2 / 3), max_train_months_possible))
 else:
     nb_mois_total = 24
     max_train_months_possible = 23
@@ -2675,7 +2677,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                 tbias_ok = "ℹ️"
                 # Pour Ridge/Lasso : le biais peut être légèrement non nul → afficher la vraie valeur
                 if best_metrics.get('model_type') in ["Ridge", "Lasso"] and abs(train_bias_val) > 0.01:
-                    train_bias_display = f"{train_bias_val:.2f}%"
+                    train_bias_display = f"{train_bias_val:.{bias_decimals}f}%"
                     train_bias_note = "ℹ️ Biais sur données d'entraînement (régularisation peut induire un léger biais)"
                     tbias_ok = "✅" if abs(train_bias_val) <= 5 else ("⚠️" if abs(train_bias_val) <= 10 else "❌")
                 # Statuts train
@@ -2745,7 +2747,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         </tr>
                         <tr>
                             <td style="padding:6px 8px; font-weight:bold; color:#00485F;">Biais (%) ⭐</td>
-                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.2f}%</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.{bias_decimals}f}%</td>
                             <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                             <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{bias_ok}</td>
                         </tr>
@@ -2804,7 +2806,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                     </tr>
                     <tr>
                         <td style="padding:6px 8px;">Biais LOO-CV (%)</td>
-                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.2f}%</td>
+                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.{bias_decimals}f}%</td>
                         <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                         <td style="padding:6px 8px; text-align:center;">{bias_ok_s}</td>
                     </tr>
