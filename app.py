@@ -1970,6 +1970,10 @@ if df is not None and lancer_calcul and selected_vars:
                                 r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
                                 rmse = rmse_test
                                 mae = mean_absolute_error(y_test, y_pred_test)
+                                # MAPE sur test
+                                with np.errstate(divide='ignore', invalid='ignore'):
+                                    mape = np.mean(np.abs((y_test - y_pred_test) / y_test)) * 100
+                                    mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
                                 
                                 # Détection d'overfitting par comparaison train/test
                                 overfitting_detected = False
@@ -1991,8 +1995,14 @@ if df is not None and lancer_calcul and selected_vars:
                                 rmse = math.sqrt(ssr / df_res)
                                 
                                 cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                                # Biais IPMVP : formule officielle Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
+                                # Biais IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
+                                # NOTE : toujours ≈ 0 pour régression linéaire avec intercept (OLS)
+                                # On calcule aussi le MAPE (Mean Abs % Error) qui lui est toujours > 0
                                 bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
+                                # MAPE = moyenne des |erreurs relatives| en %
+                                with np.errstate(divide='ignore', invalid='ignore'):
+                                    mape = np.mean(np.abs((y_train - y_pred) / y_train)) * 100
+                                    mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
                                 mae = mean_absolute_error(y_train, y_pred)
                                 
                                 overfitting_detected = False
@@ -2015,7 +2025,10 @@ if df is not None and lancer_calcul and selected_vars:
                             if is_overfitted and severity == "error":
                                 continue
                             
-                            # Récupération des coefficients
+                            # Récupération des coefficients - initialisation défensive
+                            coefs = {}
+                            intercept = 0.0
+                            
                             if m_type in ["Linéaire", "Ridge", "Lasso"]:
                                 coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
                                 intercept = m_obj.intercept_
@@ -2040,6 +2053,7 @@ if df is not None and lancer_calcul and selected_vars:
                                 'cv_rmse': cv_rmse,
                                 'mae': mae,
                                 'bias': bias,
+                                'mape': mape,
                                 'coefficients': coefs,
                                 'intercept': intercept,
                                 'conformite': conformite,
@@ -2273,6 +2287,10 @@ if df is not None and lancer_calcul and selected_vars:
                             r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
                             mae = mean_absolute_error(y_test, y_pred_test)
                             rmse = rmse_test
+                            # MAPE sur test
+                            with np.errstate(divide='ignore', invalid='ignore'):
+                                mape = np.mean(np.abs((y_test - y_pred_test) / y_test)) * 100
+                                mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
                             
                             overfitting_detected = False
                             if abs(r2_train - r2_test) > 0.2 or cv_rmse_test > cv_rmse_train * 1.5:
@@ -2291,7 +2309,12 @@ if df is not None and lancer_calcul and selected_vars:
                             
                             cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
                             # Biais IPMVP officiel : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
+                            # NOTE : toujours ≈ 0 pour OLS avec intercept par construction
                             bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
+                            # MAPE = moyenne des |erreurs relatives| en % (toujours > 0, pertinent)
+                            with np.errstate(divide='ignore', invalid='ignore'):
+                                mape = np.mean(np.abs((y_train - y_pred) / y_train)) * 100
+                                mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
                             mae = mean_absolute_error(y_train, y_pred)
                             
                             overfitting_detected = False
@@ -2313,7 +2336,10 @@ if df is not None and lancer_calcul and selected_vars:
                         if is_overfitted and severity == "error":
                             continue
                         
-                        # Récupération des coefficients (même logique)
+                        # Récupération des coefficients - initialisation défensive
+                        coefs = {}
+                        intercept = 0.0
+                        
                         if m_type in ["Linéaire", "Ridge", "Lasso"]:
                             coefs = {feature: coef for feature, coef in zip(combo, m_obj.coef_)}
                             intercept = m_obj.intercept_
@@ -2338,6 +2364,7 @@ if df is not None and lancer_calcul and selected_vars:
                             'cv_rmse': cv_rmse,
                             'mae': mae,
                             'bias': bias,
+                            'mape': mape,
                             'coefficients': coefs,
                             'intercept': intercept,
                             'conformite': conformite,
@@ -2538,10 +2565,11 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             with col2:
                 test_metrics = f"""
                 <table class="stats-table">
-                    <tr><th>Métrique</th><th>Valeur Test</th></tr>
-                    <tr><td>{tooltip("R²", "Coefficient de détermination sur les données de test (validation)")}</td><td>{best_metrics['r2']:.4f}</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur le test")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur le test")}</td><td>{best_metrics['bias']:.{bias_decimals}f}</td></tr>
+                    <tr><th>Métrique</th><th>Valeur Test</th><th>Seuil IPMVP</th></tr>
+                    <tr><td>{tooltip("R²", "Coefficient de détermination sur les données de test (validation)")}</td><td>{best_metrics['r2']:.4f}</td><td>≥ 0.75</td></tr>
+                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur le test")}</td><td>{best_metrics['cv_rmse']:.4f}</td><td>≤ 0.20</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Formule IPMVP officielle : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100 sur les données de test. Non nul ici car données non-vues.")}</td><td>{best_metrics['bias']:.{bias_decimals}f}%</td><td>|biais| < 5%</td></tr>
+                    <tr><td>{tooltip("MAPE (%)", "Mean Absolute Percentage Error sur le test : moyenne des |erreurs relatives| en %.")}</td><td><strong>{best_metrics.get('mape', 0):.{bias_decimals}f}%</strong></td><td>< 10% recommandé</td></tr>
                 </table>
                 """
                 st.markdown(test_metrics, unsafe_allow_html=True)
@@ -2577,10 +2605,13 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             with col1:
                 standard_metrics = f"""
                 <table class="stats-table">
-                    <tr><th>Métrique</th><th>Valeur</th></tr>
-                    <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.{bias_decimals}f}</td></tr>
+                    <tr><th>Métrique</th><th>Valeur</th><th>Seuil IPMVP</th></tr>
+                    <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td><td>≥ 0.75 ✓</td></tr>
+                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td><td>≤ 0.20</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Formule IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100. TOUJOURS = 0 pour régression linéaire avec intercept (propriété mathématique OLS). Voir MAPE ci-dessous.")}</td>
+                        <td>{best_metrics['bias']:.{bias_decimals}f} <small style='color:#888'>(OLS = 0 par construction)</small></td><td>|biais| < 5%</td></tr>
+                    <tr><td>{tooltip("MAPE (%)", "Mean Absolute Percentage Error : moyenne des |erreurs relatives| en %. Métrique complémentaire utile car non nulle, contrairement au biais OLS. Pas de seuil IPMVP officiel mais < 10% est bon.")}</td>
+                        <td><strong>{best_metrics.get('mape', 0):.{bias_decimals}f}%</strong></td><td>< 10% recommandé</td></tr>
                 </table>
                 """
                 st.markdown(standard_metrics, unsafe_allow_html=True)
