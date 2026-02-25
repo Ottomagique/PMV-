@@ -780,63 +780,6 @@ def calculate_bias_reel_cv(X, y, model, decimal_places=2):
         return 0.0
 
 
-    """
-    Calcule le biais selon la formule IPMVP officielle :
-    
-    Biais (%) = [Σ(Ŷᵢ - Yᵢ) / (n × Ȳ)] × 100
-    
-    Où :
-      - Ŷᵢ = valeurs prédites par le modèle
-      - Yᵢ = valeurs mesurées réelles  
-      - n  = nombre d'observations
-      - Ȳ  = moyenne des valeurs mesurées
-    
-    ⚠️ NOTE IMPORTANTE : Pour une régression linéaire avec intercept entraînée sur les données,
-    le biais sur le train est TOUJOURS = 0 par définition (propriété OLS : Σ résidus = 0).
-    C'est mathématiquement correct, pas un bug.
-    Le biais pertinent est donc uniquement celui du TEST (données non-vues).
-    
-    Un biais positif → le modèle surestime
-    Un biais négatif → le modèle sous-estime
-    Seuil IPMVP recommandé : |Biais| < 5%
-    
-    Args:
-        y_true: valeurs réelles (array-like)
-        y_pred: valeurs prédites (array-like)
-        decimal_places: nombre de décimales pour l'affichage (défaut: 2)
-    
-    Returns:
-        float: biais en % arrondi au nombre de décimales choisi
-    """
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    n = len(y_true)
-    mean_y = np.mean(y_true)
-    
-    if mean_y == 0 or n == 0:
-        return 0.0
-    
-    bias_raw = np.sum(y_pred - y_true) / (n * mean_y) * 100
-    return round(bias_raw, decimal_places)
-
-
-    """
-    Formate l'équation du modèle en ignorant les coefficients négligeables
-    """
-    equation = f"Consommation = {intercept:.4f}"
-    
-    # Trier les coefficients par valeur absolue décroissante
-    sorted_coefs = sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)
-    
-    for feature, coef in sorted_coefs:
-        # Ignorer les coefficients proches de zéro
-        if abs(coef) < threshold:
-            continue
-            
-        sign = "+" if coef >= 0 else ""
-        equation += f" {sign} {coef:.4f} × {feature}"
-    
-    return equation
 
 def format_equation(intercept, coefficients, threshold=1e-4):
     """
@@ -2527,6 +2470,14 @@ if df is not None and lancer_calcul and selected_vars:
             </div>
             """, unsafe_allow_html=True)
         
+        with col4:
+            st.markdown(f"""
+            <div class="metrics-card" style="text-align: center;">
+                <h4>Modèle sélectionné</h4>
+                <span class="model-badge">{best_metrics['model_name']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
         # Affichage des périodes d'analyse
         st.markdown("---")
         st.subheader("📅 Périodes d'analyse")
@@ -2582,14 +2533,6 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                 <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">
                     ℹ️ Mode standard (pas de validation train/test car < 18 mois de données)
                 </p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <div class="metrics-card" style="text-align: center;">
-                <h4>Modèle sélectionné</h4>
-                <span class="model-badge">{best_metrics['model_name']}</span>
             </div>
             """, unsafe_allow_html=True)
         
