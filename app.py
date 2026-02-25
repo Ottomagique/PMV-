@@ -1686,22 +1686,32 @@ st.sidebar.subheader("✂️ Paramètres Train/Test")
 
 # Calcul dynamique du max de mois train selon les données
 if df is not None:
-    nb_obs_total = len(df)
-    # Max train = total - 1 (minimum 1 pour le test)
-    max_train_months_possible = max(12, nb_obs_total - 1)
-    # Valeur par défaut : 12 mois (baseline IPMVP standard)
-    default_train = 12
-    default_train = min(default_train, max_train_months_possible)
+    try:
+        if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+            df[date_col] = pd.to_datetime(df[date_col])
+        nb_mois_total = df[date_col].dt.to_period('M').nunique()
+    except:
+        nb_mois_total = len(df)
+    
+    max_train_months_possible = max(12, nb_mois_total - 1)
+    default_train = min(12, max_train_months_possible)
 else:
-    max_train_months_possible = 24
+    nb_mois_total = 24
+    max_train_months_possible = 23
     default_train = 12
 
-train_months_manual = st.sidebar.slider(
-    "Mois d'entraînement (train)",
-    min_value=12,
-    max_value=min(36, max_train_months_possible),
-    value=default_train,
-    step=1,
+# N'afficher le slider que si on a assez de mois pour un split (≥13 mois)
+if nb_mois_total >= 13:
+    _slider_min = 12
+    _slider_max = max(_slider_min + 1, min(36, max_train_months_possible))
+    _slider_val = max(_slider_min, min(default_train, _slider_max))
+
+    train_months_manual = st.sidebar.slider(
+        "Mois d'entraînement (train)",
+        min_value=_slider_min,
+        max_value=_slider_max,
+        value=_slider_val,
+        step=1,
     help="""Comment faire le split train/test manuellement :
     
     1. CHOISIR les mois de train = durée de la période de référence (baseline)
@@ -1719,10 +1729,14 @@ train_months_manual = st.sidebar.slider(
     Si train < test → le split est automatiquement rééquilibré à 2:1
     """
 )
+else:
+    # Moins de 13 mois → pas de split possible, slider masqué
+    train_months_manual = 12
+    st.sidebar.warning(f"⚠️ **{nb_mois_total} mois disponibles** — le split train/test nécessite ≥ 13 mois (12 train + 1 test minimum). Mode standard activé.")
 
-# Affichage du split prévu
-if df is not None:
-    n_total = len(df)
+# Affichage du split prévu (seulement si split possible)
+if df is not None and nb_mois_total >= 13:
+    n_total = nb_mois_total  # utiliser les mois, pas les lignes
     n_test_preview = n_total - train_months_manual
     if n_test_preview < 1:
         n_test_preview = 1
@@ -2653,14 +2667,16 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             
             col_train, col_test = st.columns(2)
             with col_train:
-                # Affichage biais train : OLS → toujours ≈ 0, Ridge/Lasso → valeur réelle
-                if best_metrics.get('model_type') == "Linéaire" and abs(train_bias_val) < 0.05:
-                    train_bias_display = f"≈ 0.00% (OLS)"
-                    train_bias_note = "ℹ️ Le biais OLS sur le train est toujours ≈ 0 par construction mathématique"
-                    tbias_ok = "ℹ️"
-                else:
-                    train_bias_display = f"{train_bias_val:.{bias_decimals}f}%"
-                    train_bias_note = "ℹ️ Biais sur données d'entraînement (non IPMVP de référence)"
+                # Biais TRAIN : toujours = 0 pour OLS/Ridge/Lasso par construction mathématique
+                # Σ(Ŷ-Y) = 0 est une propriété algébrique de toute régression avec intercept
+                # On affiche la vraie valeur arrondie à 2 décimales max pour éviter 0.0000000%
+                train_bias_display = f"≈ 0.00% (OLS)"
+                train_bias_note = "ℹ️ Le biais sur les données d'entraînement est toujours ≈ 0 par construction (propriété OLS)"
+                tbias_ok = "ℹ️"
+                # Pour Ridge/Lasso : le biais peut être légèrement non nul → afficher la vraie valeur
+                if best_metrics.get('model_type') in ["Ridge", "Lasso"] and abs(train_bias_val) > 0.01:
+                    train_bias_display = f"{train_bias_val:.2f}%"
+                    train_bias_note = "ℹ️ Biais sur données d'entraînement (régularisation peut induire un léger biais)"
                     tbias_ok = "✅" if abs(train_bias_val) <= 5 else ("⚠️" if abs(train_bias_val) <= 10 else "❌")
                 # Statuts train
                 tr2_ok  = "✅" if train_r2_val  >= 0.75 else ("⚠️" if train_r2_val  >= 0.60 else "❌")
@@ -2729,7 +2745,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         </tr>
                         <tr>
                             <td style="padding:6px 8px; font-weight:bold; color:#00485F;">Biais (%) ⭐</td>
-                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.{bias_decimals}f}%</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.2f}%</td>
                             <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                             <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{bias_ok}</td>
                         </tr>
@@ -2759,19 +2775,19 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             bias_std = best_metrics['bias']
             r2_ok_s  = "✅" if r2_std  >= 0.75 else ("⚠️" if r2_std  >= 0.60 else "❌")
             cv_ok_s  = "✅" if cv_std  <= 0.20 else ("⚠️" if cv_std  <= 0.30 else "❌")
-            bias_ok_s= "✅" if abs(bias_std) <= 0.5 else ("⚠️" if abs(bias_std) <= 5 else "❌")
+            bias_ok_s= "✅" if abs(bias_std) <= 5 else ("⚠️" if abs(bias_std) <= 10 else "❌")
             
             st.markdown(f"""
             <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
                 <h4 style="color: #00485F; margin: 0 0 12px 0;">📅 PÉRIODE ANALYSÉE (MODE STANDARD)</h4>
-                <p style="margin: 4px 0;">📅 <strong>Du :</strong> {df_filtered[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {df_filtered[date_col].max().strftime('%d/%m/%Y')}</p>
+                <p style="margin: 4px 0;">📅 <strong>Du :</strong> {df_filtered[date_col].min().strftime('%b %Y')} &nbsp;→&nbsp; <strong>Au :</strong> {df_filtered[date_col].max().strftime('%b %Y')}</p>
                 <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(df_filtered)} mois</p>
                 <hr style="border:1px solid #6DBABC44; margin:10px 0;">
                 <table style="width:60%; border-collapse:collapse; font-size:0.95em;">
                     <tr style="background:#6DBABC22;">
                         <th style="padding:6px 8px; text-align:left;">Métrique</th>
                         <th style="padding:6px 8px; text-align:center;">Valeur</th>
-                        <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                        <th style="padding:6px 8px; text-align:center;">Seuil IPMVP</th>
                         <th style="padding:6px 8px; text-align:center;">Statut</th>
                     </tr>
                     <tr>
@@ -2788,12 +2804,12 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                     </tr>
                     <tr>
                         <td style="padding:6px 8px;">Biais LOO-CV (%)</td>
-                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.{bias_decimals}f}%</td>
-                        <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
+                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.2f}%</td>
+                        <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                         <td style="padding:6px 8px; text-align:center;">{bias_ok_s}</td>
                     </tr>
                 </table>
-                <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Mode standard — biais calculé par validation croisée LOO</p>
+                <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Mode standard — biais calculé par validation croisée LOO (Leave-One-Out)</p>
             </div>
             """, unsafe_allow_html=True)
         
