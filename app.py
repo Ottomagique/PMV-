@@ -2567,12 +2567,12 @@ if df is not None and lancer_calcul and selected_vars:
             </div>
             """, unsafe_allow_html=True)
         
-        # Affichage des périodes d'analyse
+        # Affichage des périodes d'analyse AVEC MÉTRIQUES
         st.markdown("---")
-        st.subheader("📅 Périodes d'analyse")
+        st.subheader("📅 Périodes d'analyse & Métriques")
         
         if best_metrics.get('mode') == 'train_test':
-            # Mode Train/Test : afficher les deux périodes
+            # Mode Train/Test : afficher les deux périodes avec leurs métriques
             train_df_temp, test_df_temp, split_date_temp = create_train_test_split(df_filtered, date_col, train_months_manual)
             
             # ⚠️ ALERTE si le split est déséquilibré
@@ -2586,42 +2586,154 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
 → Ajustez le slider "Mois d'entraînement" pour un split cohérent avec vos données.
 """)
             
-            ratio_str = f"{len(train_df_temp)}/{len(test_df_temp)}"
+            # Récupération des métriques train
+            train_r2_val    = best_metrics.get('train_r2', 0)
+            train_cv_val    = best_metrics.get('train_cv_rmse', 0)
+            train_bias_val  = best_metrics.get('train_bias', 0)
+            # Récupération des métriques test
+            test_r2_val     = best_metrics.get('test_r2', best_metrics['r2'])
+            test_cv_val     = best_metrics.get('test_cv_rmse', best_metrics['cv_rmse'])
+            test_bias_val   = best_metrics.get('test_bias', best_metrics['bias'])
+            
+            # Statuts test
+            r2_ok   = "✅" if test_r2_val  >= 0.75 else ("⚠️" if test_r2_val  >= 0.60 else "❌")
+            cv_ok   = "✅" if test_cv_val  <= 0.20 else ("⚠️" if test_cv_val  <= 0.30 else "❌")
+            bias_ok = "✅" if abs(test_bias_val) <= 0.5 else ("⚠️" if abs(test_bias_val) <= 5 else "❌")
             
             col_train, col_test = st.columns(2)
             with col_train:
+                train_bias_display = f"≈ 0.00% (OLS)" if abs(train_bias_val) < 0.01 else f"{train_bias_val:.{bias_decimals}f}%"
+                # Statuts train
+                tr2_ok  = "✅" if train_r2_val  >= 0.75 else ("⚠️" if train_r2_val  >= 0.60 else "❌")
+                tcv_ok  = "✅" if train_cv_val  <= 0.20 else ("⚠️" if train_cv_val  <= 0.30 else "❌")
                 st.markdown(f"""
                 <div style="background-color: rgba(150, 185, 29, 0.1); border-left: 4px solid #96B91D; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #96B91D; margin: 0 0 10px 0;">🎯 PÉRIODE D'ENTRAÎNEMENT</h4>
-                    <p style="margin: 5px 0;"><strong>📅 Du :</strong> {train_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
-                    <p style="margin: 5px 0;"><strong>📅 Au :</strong> {train_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
-                    <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(train_df_temp)} valeurs</p>
-                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(train_df_temp)} mois ({round((train_df_temp[date_col].max() - train_df_temp[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
+                    <h4 style="color: #96B91D; margin: 0 0 12px 0;">🎯 PÉRIODE D'ENTRAÎNEMENT (TRAIN)</h4>
+                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {train_df_temp[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {train_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(train_df_temp)} mois</p>
+                    <hr style="border:1px solid #96B91D44; margin:10px 0;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
+                        <tr style="background:#96B91D22;">
+                            <th style="padding:6px 8px; text-align:left;">Métrique</th>
+                            <th style="padding:6px 8px; text-align:center;">Valeur</th>
+                            <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                            <th style="padding:6px 8px; text-align:center;">Statut</th>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 8px;">R²</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_r2_val:.4f}</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≥ 0.75</td>
+                            <td style="padding:6px 8px; text-align:center;">{tr2_ok}</td>
+                        </tr>
+                        <tr style="background:#96B91D11;">
+                            <td style="padding:6px 8px;">CV(RMSE)</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_cv_val:.4f}</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.20</td>
+                            <td style="padding:6px 8px; text-align:center;">{tcv_ok}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 8px;">Biais (%)</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_bias_display}</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
+                            <td style="padding:6px 8px; text-align:center;">ℹ️</td>
+                        </tr>
+                    </table>
+                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Le biais OLS sur le train est toujours ≈ 0 par construction mathématique</p>
                 </div>
                 """, unsafe_allow_html=True)
             
             with col_test:
                 st.markdown(f"""
                 <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #6DBABC; margin: 0 0 10px 0;">🧪 PÉRIODE DE TEST</h4>
-                    <p style="margin: 5px 0;"><strong>📅 Du :</strong> {test_df_temp[date_col].min().strftime('%d/%m/%Y')}</p>
-                    <p style="margin: 5px 0;"><strong>📅 Au :</strong> {test_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
-                    <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(test_df_temp)} valeurs</p>
-                    <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(test_df_temp)} mois ({round((test_df_temp[date_col].max() - test_df_temp[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
+                    <h4 style="color: #6DBABC; margin: 0 0 12px 0;">🧪 PÉRIODE DE TEST (VALIDATION)</h4>
+                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {test_df_temp[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {test_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(test_df_temp)} mois</p>
+                    <hr style="border:1px solid #6DBABC44; margin:10px 0;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
+                        <tr style="background:#6DBABC22;">
+                            <th style="padding:6px 8px; text-align:left;">Métrique</th>
+                            <th style="padding:6px 8px; text-align:center;">Valeur</th>
+                            <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                            <th style="padding:6px 8px; text-align:center;">Statut</th>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 8px; font-weight:bold; color:#00485F;">R² ⭐</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_r2_val:.4f}</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≥ 0.75</td>
+                            <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{r2_ok}</td>
+                        </tr>
+                        <tr style="background:#6DBABC11;">
+                            <td style="padding:6px 8px; font-weight:bold; color:#00485F;">CV(RMSE) ⭐</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_cv_val:.4f}</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.20</td>
+                            <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{cv_ok}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 8px; font-weight:bold; color:#00485F;">Biais (%) ⭐</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.{bias_decimals}f}%</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
+                            <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{bias_ok}</td>
+                        </tr>
+                    </table>
+                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#00485F; font-weight:bold;">⭐ Métriques sur données NON VUES — indicateurs IPMVP de référence</p>
                 </div>
                 """, unsafe_allow_html=True)
+            
+            # Comparaison synthétique Train vs Test
+            r2_gap = abs(train_r2_val - test_r2_val)
+            gap_color = "#4caf50" if r2_gap < 0.10 else ("#ff9800" if r2_gap < 0.20 else "#f44336")
+            gap_icon  = "✅" if r2_gap < 0.10 else ("⚠️" if r2_gap < 0.20 else "❌")
+            st.markdown(f"""
+            <div style="background:#f5f5f5; border-radius:8px; padding:10px 16px; margin-top:12px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                <span style="font-weight:bold; color:#00485F;">📊 Écart R² Train/Test :</span>
+                <span style="font-size:1.2em; font-weight:bold; color:{gap_color};">{gap_icon} {r2_gap:.4f}</span>
+                <span style="color:#666; font-size:0.9em;">({'Excellent — pas d\\'overfitting' if r2_gap < 0.10 else ('Acceptable' if r2_gap < 0.20 else 'Overfitting probable')})</span>
+                <span style="color:#888; font-size:0.85em;">R² Train={train_r2_val:.4f} | R² Test={test_r2_val:.4f}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
         else:
-            # Mode Standard : afficher la période complète
+            # Mode Standard : afficher la période complète avec ses métriques
+            r2_std   = best_metrics['r2']
+            cv_std   = best_metrics['cv_rmse']
+            bias_std = best_metrics['bias']
+            r2_ok_s  = "✅" if r2_std  >= 0.75 else ("⚠️" if r2_std  >= 0.60 else "❌")
+            cv_ok_s  = "✅" if cv_std  <= 0.20 else ("⚠️" if cv_std  <= 0.30 else "❌")
+            bias_ok_s= "✅" if abs(bias_std) <= 0.5 else ("⚠️" if abs(bias_std) <= 5 else "❌")
+            
             st.markdown(f"""
             <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
-                <h4 style="color: #00485F; margin: 0 0 10px 0;">📅 PÉRIODE ANALYSÉE</h4>
-                <p style="margin: 5px 0;"><strong>📅 Du :</strong> {df_filtered[date_col].min().strftime('%d/%m/%Y')}</p>
-                <p style="margin: 5px 0;"><strong>📅 Au :</strong> {df_filtered[date_col].max().strftime('%d/%m/%Y')}</p>
-                <p style="margin: 5px 0;"><strong>📊 Observations :</strong> {len(df_filtered)} valeurs</p>
-                <p style="margin: 5px 0;"><strong>📈 Durée :</strong> ~{len(df_filtered)} mois ({round((df_filtered[date_col].max() - df_filtered[date_col].min()).days / 30.44, 1)} mois calendaires)</p>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">
-                    ℹ️ Mode standard (pas de validation train/test car < 18 mois de données)
-                </p>
+                <h4 style="color: #00485F; margin: 0 0 12px 0;">📅 PÉRIODE ANALYSÉE (MODE STANDARD)</h4>
+                <p style="margin: 4px 0;">📅 <strong>Du :</strong> {df_filtered[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {df_filtered[date_col].max().strftime('%d/%m/%Y')}</p>
+                <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(df_filtered)} mois</p>
+                <hr style="border:1px solid #6DBABC44; margin:10px 0;">
+                <table style="width:60%; border-collapse:collapse; font-size:0.95em;">
+                    <tr style="background:#6DBABC22;">
+                        <th style="padding:6px 8px; text-align:left;">Métrique</th>
+                        <th style="padding:6px 8px; text-align:center;">Valeur</th>
+                        <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                        <th style="padding:6px 8px; text-align:center;">Statut</th>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px 8px;">R²</td>
+                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{r2_std:.4f}</td>
+                        <td style="padding:6px 8px; text-align:center; color:#666;">≥ 0.75</td>
+                        <td style="padding:6px 8px; text-align:center;">{r2_ok_s}</td>
+                    </tr>
+                    <tr style="background:#6DBABC11;">
+                        <td style="padding:6px 8px;">CV(RMSE)</td>
+                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{cv_std:.4f}</td>
+                        <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.20</td>
+                        <td style="padding:6px 8px; text-align:center;">{cv_ok_s}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px 8px;">Biais LOO-CV (%)</td>
+                        <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.{bias_decimals}f}%</td>
+                        <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
+                        <td style="padding:6px 8px; text-align:center;">{bias_ok_s}</td>
+                    </tr>
+                </table>
+                <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Mode standard — biais calculé par validation croisée LOO</p>
             </div>
             """, unsafe_allow_html=True)
         
@@ -2635,163 +2747,24 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             </div>
             """, unsafe_allow_html=True)
         
-        # MÉTRIQUES PRINCIPALES AVEC COMPARAISON TRAIN/TEST
-        st.subheader("📊 Métriques détaillées")
+        # INFORMATIONS COMPLÉMENTAIRES DU MODÈLE
+        st.markdown(f"""
+        <div class="metrics-card" style="margin-top:12px;">
+            <h4>🔍 Informations du modèle sélectionné</h4>
+            <p style="margin:4px 0;"><strong>Variables :</strong> {', '.join(best_features)}</p>
+            <p style="margin:4px 0;"><strong>Nb variables :</strong> {len(best_features)} &nbsp;|&nbsp; <strong>Observations totales :</strong> {len(df_filtered)} &nbsp;|&nbsp; <strong>Ratio obs/var :</strong> {len(df_filtered)/len(best_features):.1f}:1</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if best_metrics.get('mode') == 'train_test':
-            # Affichage train/test côte à côte
-            # Calculer les durées réelles
-            train_df_display, test_df_display, _ = create_train_test_split(df_filtered, date_col, train_months_manual)
-            train_duration = len(train_df_display)
-            test_duration = len(test_df_display)
+        # ALERTE R² NÉGATIF SUR TEST
+        if best_metrics.get('mode') == 'train_test' and best_metrics.get('test_r2', best_metrics['r2']) < 0:
+            st.error(f"""⚠️ **R² TEST NÉGATIF** : Le modèle est moins performant qu'une simple moyenne sur les données de test.
             
-            st.markdown(f"""
-            <div class="comparison-grid">
-                <div class="train-card">
-                    <h4>🎯 Entraînement ({train_duration} mois)</h4>
-                </div>
-                <div class="test-card">
-                    <h4>🧪 Test ({test_duration} mois)</h4>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                train_r2_val = best_metrics.get('train_r2', 0)
-                train_cv_val = best_metrics.get('train_cv_rmse', 0)
-                train_bias_val = best_metrics.get('train_bias', 0)
-                train_bias_display = f"≈ 0% <small style='color:#888; font-size:11px'>(OLS par construction)</small>" if abs(train_bias_val) < 0.01 else f"{train_bias_val:.{bias_decimals}f}%"
-                
-                train_metrics = f"""
-                <table class="stats-table">
-                    <tr><th>Métrique IPMVP</th><th>Train</th><th>Seuil</th></tr>
-                    <tr>
-                        <td>{tooltip("R²", "R² sur les données d'entraînement. Attendu élevé car modèle ajusté sur ces données.")}</td>
-                        <td><strong>{train_r2_val:.4f}</strong></td>
-                        <td>≥ 0.75</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("CV(RMSE)", "CV(RMSE) sur les données d'entraînement.")}</td>
-                        <td><strong>{train_cv_val:.4f}</strong></td>
-                        <td>≤ 0.20</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("Biais (%)", "Biais sur le train. Toujours ≈ 0 pour OLS avec intercept (Σrésidus=0 par définition). Le biais pertinent est sur le TEST.")}</td>
-                        <td>{train_bias_display}</td>
-                        <td>≤ 0.5%</td>
-                    </tr>
-                </table>
-                """
-                st.markdown(train_metrics, unsafe_allow_html=True)
-            
-            with col2:
-                r2_test_val = best_metrics['r2']
-                cv_test_val = best_metrics['cv_rmse']
-                bias_test_val = best_metrics['bias']
-                
-                r2_ok = "✅" if r2_test_val >= 0.75 else ("⚠️" if r2_test_val >= 0.60 else "❌")
-                cv_ok = "✅" if cv_test_val <= 0.20 else ("⚠️" if cv_test_val <= 0.30 else "❌")
-                bias_ok = "✅" if abs(bias_test_val) <= 0.5 else ("⚠️" if abs(bias_test_val) <= 5 else "❌")
-                
-                test_metrics = f"""
-                <table class="stats-table">
-                    <tr><th>Métrique IPMVP</th><th>Test</th><th>Seuil</th><th>Statut</th></tr>
-                    <tr>
-                        <td>{tooltip("R²", "R² sur les données de TEST (non-vues). C'est le R² de validation, le plus important pour IPMVP.")}</td>
-                        <td><strong>{r2_test_val:.4f}</strong></td>
-                        <td>≥ 0.75</td>
-                        <td>{r2_ok}</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("CV(RMSE)", "CV(RMSE) sur les données de test. Mesure la précision du modèle sur des données non-vues.")}</td>
-                        <td><strong>{cv_test_val:.4f}</strong></td>
-                        <td>≤ 0.20</td>
-                        <td>{cv_ok}</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("Biais (%)", "Formule IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100 sur le TEST. Non nul ici car données non-vues par le modèle. C'est le vrai indicateur de biais. Seuil IPMVP : ≤ 0.5%")}</td>
-                        <td><strong>{bias_test_val:.{bias_decimals}f}%</strong></td>
-                        <td>≤ 0.5%</td>
-                        <td>{bias_ok}</td>
-                    </tr>
-                </table>
-                """
-                st.markdown(test_metrics, unsafe_allow_html=True)
-            
-            # Analyse des écarts train/test
-            r2_gap = abs(best_metrics.get('train_r2', 0) - best_metrics['r2'])
-            cv_gap = abs(best_metrics.get('train_cv_rmse', 0) - best_metrics['cv_rmse'])
-            
-            # ALERTE R² NÉGATIF SUR TEST
-            if best_metrics['r2'] < 0:
-                st.error(f"""⚠️ **R² TEST NÉGATIF ({best_metrics['r2']:.4f})** : Le modèle est moins performant qu'une simple moyenne sur les données de test.
-                
-**Causes possibles :**
-- Variables explicatives du test très différentes de la période d'entraînement
-- Trop peu de données en test (< 6 mois)
-- Modèle over-fitté sur le train → ne généralise pas
-- Distribution différente entre train et test (saisonnalité, changement d'usage)
-
 **Actions recommandées :**
 1. Augmenter la période d'entraînement (slider "Mois d'entraînement")
 2. Vérifier la cohérence des variables sur toute la période
-3. Essayer le mode standard si < 18 mois de données disponibles
+3. Réduire le nombre de variables (risque d'overfitting)
 """)
-            elif best_metrics.get('overfitting_train_test'):
-                st.warning(f"⚠️ **Écart train/test détecté** : R² gap = {r2_gap:.3f}, CV(RMSE) gap = {cv_gap:.3f}")
-            else:
-                st.info(f"✅ **Bonne stabilité train/test** : R² gap = {r2_gap:.3f}, CV(RMSE) gap = {cv_gap:.3f}")
-        
-        else:
-            # Affichage standard
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                bias_val = best_metrics['bias']
-                r2_ok = "✅" if best_metrics['r2'] >= 0.75 else "❌"
-                cv_ok = "✅" if best_metrics['cv_rmse'] <= 0.20 else "❌"
-                bias_ok = "✅" if abs(bias_val) <= 0.5 else ("⚠️" if abs(bias_val) <= 5 else "❌")
-                
-                standard_metrics = f"""
-                <table class="stats-table">
-                    <tr><th>Métrique IPMVP</th><th>Valeur</th><th>Seuil</th><th>Statut</th></tr>
-                    <tr>
-                        <td>{tooltip("R²", "Coefficient de détermination. Mesure la proportion de variance expliquée. Seuil IPMVP : ≥ 0.75")}</td>
-                        <td><strong>{best_metrics['r2']:.4f}</strong></td>
-                        <td>≥ 0.75</td>
-                        <td>{r2_ok}</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("CV(RMSE)", "Coefficient de variation de l'erreur quadratique moyenne. Seuil IPMVP : ≤ 0.20 (20%)")}</td>
-                        <td><strong>{best_metrics['cv_rmse']:.4f}</strong></td>
-                        <td>≤ 0.20</td>
-                        <td>{cv_ok}</td>
-                    </tr>
-                    <tr>
-                        <td>{tooltip("Biais (%)", "Biais RÉEL calculé par validation croisée Leave-One-Out. Formule IPMVP : Σ(Ŷᵢ_LOO - Yᵢ)/(n×Ȳ)×100. Contrairement au biais sur train (toujours = 0 en OLS), ce biais est calculé sur des prédictions hors-échantillon → valeur réelle et non-biaisée. Seuil IPMVP : ≤ 0.5%")}</td>
-                        <td><strong>{bias_val:.{bias_decimals}f}%</strong></td>
-                        <td>≤ 0.5%</td>
-                        <td>{bias_ok}</td>
-                    </tr>
-                </table>
-                <small style='color:#666; font-style:italic;'>⚡ Biais calculé par validation croisée (LOO-CV) — valeur réelle hors-échantillon</small>
-                """
-                st.markdown(standard_metrics, unsafe_allow_html=True)
-            
-            with col2:
-                # Informations sur le modèle
-                model_info_html = f"""
-                <div class="metrics-card">
-                    <h4>🔍 Informations du modèle</h4>
-                    <p><strong>Variables utilisées :</strong> {', '.join(best_features)}</p>
-                    <p><strong>Nombre de variables :</strong> {len(best_features)}</p>
-                    <p><strong>Observations :</strong> {len(df_filtered)}</p>
-                    <p><strong>Ratio obs/var :</strong> {len(df_filtered)/len(best_features):.1f}:1</p>
-                </div>
-                """
-                st.markdown(model_info_html, unsafe_allow_html=True)
         
         # ÉQUATION DU MODÈLE
         st.subheader("📝 Équation d'ajustement")
@@ -3362,16 +3335,15 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.4.1 - Bugs train/test corrigés ! 🎉</strong></p>
-    <p><strong>🔧 Correctifs v2.4.1 :</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.5 - Métriques Train/Test par période ! 🎉</strong></p>
+    <p><strong>🔧 Nouveautés v2.5 :</strong></p>
     <ul style="text-align: left; display: inline-block;">
-        <li>✅ Bug #1 : default_end corrigé → dernier jour du 12ème mois (plus de 01/12 tronqué)</li>
-        <li>✅ Bug #2 : Rejet R² test assoupli → seuil -0.5 (au lieu de 0)</li>
-        <li>✅ Bug #3 : Minimum test réduit à 1 point (au lieu de 3)</li>
-        <li>✅ Bug #4 : check_variable_limits ne bloque plus les périodes entières</li>
-        <li>✅ Bug #5 : default_train = 12 mois (plus stable, IPMVP standard)</li>
-        <li>✅ Split train/test activé dès >12 mois</li>
-        <li>✅ Tableau récapitulatif de toutes les périodes testées</li>
+        <li>✅ Carte TRAIN : dates + R², CV(RMSE), Biais propres à la période d'entraînement</li>
+        <li>✅ Carte TEST : dates + R², CV(RMSE), Biais propres à la période de test (⭐ indicateurs IPMVP)</li>
+        <li>✅ Écart R² Train/Test affiché avec diagnostic overfitting</li>
+        <li>✅ Suppression du bloc "Métriques détaillées" redondant</li>
+        <li>✅ Bugs train/test corrigés (v2.4.1)</li>
+        <li>✅ Split activé dès >12 mois, default_train=12 mois</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
