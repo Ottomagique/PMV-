@@ -840,12 +840,13 @@ def format_value(value, fmt=".4f", default="N/A"):
 
 def should_use_train_test_split(nb_observations):
     """
-    Détermine si on doit utiliser un split train/test
+    Détermine si on doit utiliser un split train/test.
+    Activé dès que >12 mois de données disponibles (train=12 min, test=reste ≥1 mois).
     """
-    if nb_observations >= 18:
-        return True, "🚀 Mode validation robuste: Split train/test activé"
-    elif nb_observations >= 12:
-        return False, f"⚠️ {nb_observations} mois disponibles - Split train/test recommandé avec ≥18 mois"
+    if nb_observations > 12:
+        return True, f"🚀 Mode validation robuste: Split train/test activé ({nb_observations} mois)"
+    elif nb_observations == 12:
+        return False, f"📋 Mode IPMVP standard : exactement 12 mois — pas de split possible (test = 0)"
     else:
         return False, f"📋 Mode IPMVP standard avec {nb_observations} mois de données"
 
@@ -853,12 +854,13 @@ def create_train_test_split(df, date_col, train_months=12):
     """
     Crée un split train/test temporel pour les données IPMVP.
     
-    ⚠️ RÈGLES IPMVP OBLIGATOIRES :
+    ⚠️ RÈGLES IPMVP :
     - Train ≥ 12 mois (couvrir toutes les saisons pour la baseline)
-    - Test ≥ 3 mois (validation statistiquement représentative)
+    - Test ≥ 1 mois (validation sur données non vues)
     - Train ≥ Test (le modèle doit être entraîné sur plus de données qu'il n'en valide)
     
     Mode manuel recommandé IPMVP :
+    - 13 mois de données → 12 train + 1 test
     - 18 mois de données → 12 train + 6 test (ratio 2:1)
     - 24 mois de données → 18 train + 6 test (ratio 3:1)
     - 36 mois de données → 24 train + 12 test (ratio 2:1)
@@ -876,20 +878,19 @@ def create_train_test_split(df, date_col, train_months=12):
     train_df = df_sorted[df_sorted[date_col] < split_date]
     test_df = df_sorted[df_sorted[date_col] >= split_date]
     
-    # RÈGLE 1 : test doit avoir au moins 3 points
-    if len(test_df) < 3:
-        n_test = max(3, n_total // 5)
+    # RÈGLE 1 : test doit avoir au moins 1 point
+    if len(test_df) < 1:
+        n_test = max(1, n_total - 12)
         train_df = df_sorted.iloc[:-n_test]
         test_df = df_sorted.iloc[-n_test:]
         split_date = test_df[date_col].min()
     
     # RÈGLE 2 : train doit être >= test (sinon rééquilibrer au ratio 2:1)
-    # Si test > train, on recalcule pour garder 2/3 en train et 1/3 en test
     if len(test_df) > len(train_df):
         n_train = max(12, int(n_total * 2 / 3))
         n_test = n_total - n_train
-        if n_test < 3:
-            n_test = 3
+        if n_test < 1:
+            n_test = 1
             n_train = n_total - n_test
         train_df = df_sorted.iloc[:n_train]
         test_df = df_sorted.iloc[n_train:]
@@ -897,7 +898,7 @@ def create_train_test_split(df, date_col, train_months=12):
     
     # RÈGLE 3 : train doit avoir au minimum 12 points (12 mois)
     if len(train_df) < 12:
-        n_train = min(12, n_total - 3)
+        n_train = min(12, n_total - 1)
         train_df = df_sorted.iloc[:n_train]
         test_df = df_sorted.iloc[n_train:]
         split_date = test_df[date_col].min()
@@ -1324,7 +1325,7 @@ st.markdown("""
 <ul>
     <li><strong>🛡️ Détection d'overfitting intelligente</strong> : Rejet automatique des modèles avec R² artificiellement gonflé</li>
     <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-70 points (R² + CV(RMSE) + simplicité + significativité)</li>
-    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique 18/6 mois si ≥18 mois de données</li>
+    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique activé dès >12 mois de données (12 train + reste en test)</li>
     <li><strong>⚠️ Limitations sécurité</strong> : Contrôle du ratio observations/variables (règle 10:1)</li>
     <li><strong>📊 Métriques enrichies</strong> : Comparaison train/test, valeurs t de Student, warnings intelligents</li>
 </ul>
@@ -1535,7 +1536,7 @@ if df is not None and date_col:
         <div class="mode-indicator" style="background-color: rgba(109, 186, 188, 0.1); border-color: #6DBABC;">
             <div class="mode-title">📋 Mode IPMVP Standard</div>
             <p>Analyse sur toutes les données ({nb_observations} mois)<br>
-            Protections anti-overfitting renforcées</p>
+            {"Ajoutez au moins 1 mois supplémentaire pour activer le split train/test" if nb_observations == 12 else "Données insuffisantes pour le split train/test"}</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1660,19 +1661,20 @@ else:
 
 train_months_manual = st.sidebar.slider(
     "Mois d'entraînement (train)",
-    min_value=6,
+    min_value=12,
     max_value=min(36, max_train_months_possible),
     value=default_train,
     step=1,
     help="""Comment faire le split train/test manuellement :
     
     1. CHOISIR les mois de train = durée de la période de référence (baseline)
-       → Minimum 12 mois recommandé IPMVP (couvrir toutes les saisons)
-    2. Le reste des données devient le TEST (validation)
-       → Minimum 3 mois de test requis
+       → Minimum 12 mois IPMVP (couvrir toutes les saisons)
+    2. Le reste des données devient le TEST (validation sur données non vues)
+       → Minimum 1 mois de test requis
     3. RÈGLE CLEF : Train ≥ Test (sinon le modèle ne peut pas généraliser)
     
     Exemples :
+    - 13 mois dispo → 12 train + 1 test ✓ (minimum)
     - 18 mois dispo → 12 train + 6 test (ratio 2:1) ✓
     - 24 mois dispo → 18 train + 6 test (ratio 3:1) ✓  
     - 32 mois dispo → 22 train + 10 test (ratio 2:1) ✓
@@ -1685,9 +1687,9 @@ train_months_manual = st.sidebar.slider(
 if df is not None:
     n_total = len(df)
     n_test_preview = n_total - train_months_manual
-    if n_test_preview < 3:
-        n_test_preview = 3
-        n_train_preview = n_total - 3
+    if n_test_preview < 1:
+        n_test_preview = 1
+        n_train_preview = n_total - 1
     elif n_test_preview > train_months_manual:
         n_train_preview = int(n_total * 2 / 3)
         n_test_preview = n_total - n_train_preview
@@ -1698,8 +1700,24 @@ if df is not None:
     ratio_preview = n_train_preview / n_test_preview if n_test_preview > 0 else 0
     color = "🟢" if ratio_preview >= 2 else ("🟡" if ratio_preview >= 1 else "🔴")
     st.sidebar.info(f"{color} Split prévu → **Train: {n_train_preview} mois** | **Test: {n_test_preview} mois** | Ratio: {ratio_preview:.1f}:1")
+    
+    # Affichage des dates de split si données disponibles avec colonne de date
+    if date_col and pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        try:
+            df_sorted_preview = df.sort_values(by=date_col)
+            min_date_prev = df_sorted_preview[date_col].min()
+            split_date_prev = min_date_prev + pd.DateOffset(months=n_train_preview)
+            max_date_prev = df_sorted_preview[date_col].max()
+            st.sidebar.markdown(f"""
+            <div style="background:rgba(109,186,188,0.1); padding:8px; border-radius:6px; font-size:0.85em; margin-top:4px;">
+            🎯 <b>Train :</b> {min_date_prev.strftime('%b %Y')} → {(split_date_prev - pd.DateOffset(months=1)).strftime('%b %Y')}<br>
+            🧪 <b>Test :</b> {split_date_prev.strftime('%b %Y')} → {max_date_prev.strftime('%b %Y')}
+            </div>
+            """, unsafe_allow_html=True)
+        except:
+            pass
 else:
-    st.sidebar.info(f"ℹ️ Train: {train_months_manual} mois | Test: données restantes (≥3 pts requis)")
+    st.sidebar.info(f"ℹ️ Train: {train_months_manual} mois | Test: données restantes (≥1 pt requis)")
 
 # INFORMATIONS SUR LA CONFORMITÉ IPMVP ENRICHIES
 st.sidebar.markdown("---")
@@ -1901,7 +1919,7 @@ if df is not None and lancer_calcul and selected_vars:
                     X_subset = X[list(combo)]
                     
                     # Split train/test si applicable
-                    if use_train_test and len(period_df) >= 18:
+                    if use_train_test and len(period_df) > 12:
                         train_df, test_df, split_date = create_train_test_split(period_df, date_col, train_months_manual)
                         X_train = train_df[list(combo)]
                         y_train = train_df[conso_col]
@@ -2224,7 +2242,7 @@ if df is not None and lancer_calcul and selected_vars:
                 X_subset = X[list(combo)]
                 
                 # Split train/test si applicable
-                if use_train_test and len(df_filtered) >= 18:
+                if use_train_test and len(df_filtered) > 12:
                     train_df, test_df, split_date = create_train_test_split(df_filtered, date_col, train_months_manual)
                     X_train = train_df[list(combo)]
                     y_train = train_df[conso_col]
@@ -2431,8 +2449,77 @@ if df is not None and lancer_calcul and selected_vars:
         
         progress_bar.empty()
     
-    # TRI DES MODÈLES PAR SCORE COMPOSITE (PAS PAR R² !)
-    all_models.sort(key=lambda x: x['ipmvp_score'], reverse=True)
+        # TRI DES MODÈLES PAR SCORE COMPOSITE (PAS PAR R² !)
+        all_models.sort(key=lambda x: x['ipmvp_score'], reverse=True)
+        
+        # TABLEAU RÉCAPITULATIF DE TOUTES LES PÉRIODES TESTÉES
+        if all_models:
+            st.markdown("---")
+            st.subheader("📋 Tableau récapitulatif de toutes les périodes testées")
+            
+            # Construire le tableau
+            periods_summary = []
+            # Regrouper par période pour avoir le meilleur modèle de chaque période
+            periods_seen = {}
+            for m in all_models:
+                period_key = m.get('period', 'N/A')
+                if period_key not in periods_seen or m['ipmvp_score'] > periods_seen[period_key]['ipmvp_score']:
+                    periods_seen[period_key] = m
+            
+            for period_key, m in sorted(periods_seen.items(), key=lambda x: x[1]['ipmvp_score'], reverse=True):
+                mode_label = "🚀 Train/Test" if m.get('mode') == 'train_test' else "📋 Standard"
+                qualification_label, _, _ = get_ipmvp_qualification(m['ipmvp_score'])
+                row = {
+                    "Période": period_key,
+                    "Mode": mode_label,
+                    "Modèle": m.get('model_name', 'N/A'),
+                    "Variables": ', '.join(m.get('features', [])),
+                    "R²": round(m['r2'], 4),
+                    "CV(RMSE)": round(m['cv_rmse'], 4),
+                    "Biais (%)": round(m['bias'], 2),
+                    "Score IPMVP": round(m['ipmvp_score'], 1),
+                    "Qualification": qualification_label,
+                }
+                if m.get('mode') == 'train_test':
+                    row["R² Train"] = round(m.get('train_r2', 0), 4)
+                    row["R² Test"] = round(m.get('test_r2', m['r2']), 4)
+                    row["CV Train"] = round(m.get('train_cv_rmse', 0), 4)
+                    row["CV Test"] = round(m.get('test_cv_rmse', m['cv_rmse']), 4)
+                periods_summary.append(row)
+            
+            if periods_summary:
+                df_summary = pd.DataFrame(periods_summary)
+                # Colonnes à afficher selon mode
+                has_traintest = any(m.get('mode') == 'train_test' for m in periods_seen.values())
+                
+                if has_traintest:
+                    cols_display = ["Période", "Mode", "Modèle", "Variables", "R² Train", "R² Test", "CV Train", "CV Test", "Biais (%)", "Score IPMVP", "Qualification"]
+                    cols_display = [c for c in cols_display if c in df_summary.columns]
+                else:
+                    cols_display = ["Période", "Mode", "Modèle", "Variables", "R²", "CV(RMSE)", "Biais (%)", "Score IPMVP", "Qualification"]
+                
+                df_display = df_summary[cols_display] if all(c in df_summary.columns for c in cols_display) else df_summary
+                
+                st.dataframe(
+                    df_display,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "Score IPMVP": st.column_config.ProgressColumn(
+                            "Score IPMVP /70",
+                            help="Score composite IPMVP (0-70 points)",
+                            min_value=0, max_value=70, format="%.1f"
+                        ),
+                        "R²": st.column_config.NumberColumn("R²", format="%.4f"),
+                        "R² Train": st.column_config.NumberColumn("R² Train", format="%.4f"),
+                        "R² Test": st.column_config.NumberColumn("R² Test", format="%.4f"),
+                        "CV(RMSE)": st.column_config.NumberColumn("CV(RMSE)", format="%.4f"),
+                        "CV Train": st.column_config.NumberColumn("CV Train", format="%.4f"),
+                        "CV Test": st.column_config.NumberColumn("CV Test", format="%.4f"),
+                    }
+                )
+                st.caption(f"🏆 {len(periods_summary)} période(s) évaluée(s) — triées par score IPMVP décroissant")
+
 
     # AFFICHAGE DES RÉSULTATS AVEC AMÉLIORATIONS
     if best_metrics:
@@ -3126,7 +3213,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             if best_metrics.get('overfitting_warning'):
                 recommendations.append("⚠️ **Risque d'overfitting** : " + best_metrics['overfitting_warning'])
             
-            if best_metrics.get('mode') == 'standard' and len(df_filtered) >= 18:
+            if best_metrics.get("mode") == "standard" and len(df_filtered) > 12:
                 recommendations.append("🚀 **Amélioration possible** : Vous avez assez de données pour le mode train/test (validation robuste)")
             
             # Analyse de la significativité
@@ -3273,20 +3360,20 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.3 - Corrections et améliorations ! 🎉</strong></p>
-    <p><strong>🔧 Améliorations v2.3 :</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.4 - Train/Test dès 13 mois ! 🎉</strong></p>
+    <p><strong>🔧 Améliorations v2.4 :</strong></p>
     <ul style="text-align: left; display: inline-block;">
+        <li>✅ Split train/test activé dès >12 mois (plus de limite à 18 mois)</li>
+        <li>✅ Slider train/test : minimum 12 mois (IPMVP strict)</li>
+        <li>✅ Aperçu des dates de split (train/test) dans la sidebar</li>
+        <li>✅ Tableau récapitulatif de toutes les périodes testées avec R² Train/Test</li>
         <li>✅ Bug CSS expanders corrigé (affichage labels)</li>
         <li>✅ Formule Biais IPMVP officielle : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100</li>
         <li>✅ Choix du nombre de décimales pour le Biais</li>
         <li>✅ R² négatif sur test : alerte + rejet si < -0.5</li>
         <li>✅ RMSE corrigé degrés de liberté en mode standard</li>
-        <li>✅ Fix bug should_use_train_test_split (dead code)</li>
-        <li>✅ Split train/test configurable manuellement (slider mois)</li>
-        <li>✅ Guide train/test manuel intégré</li>
         <li>✅ Détection overfitting intelligente</li>
         <li>✅ Score composite IPMVP (0-70 points)</li>
-        <li>✅ Limitations sécurité (règle 10:1)</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
