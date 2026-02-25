@@ -1520,8 +1520,13 @@ if df is not None and date_col and conso_col:
 
 # SÉLECTION DE LA PÉRIODE AVEC MODE ADAPTATIF
 if df is not None and date_col:
-    # Détermination du mode d'analyse
-    nb_observations = len(df)
+    # Détermination du mode d'analyse — nombre de MOIS UNIQUES
+    try:
+        if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+            df[date_col] = pd.to_datetime(df[date_col])
+        nb_observations = df[date_col].dt.to_period('M').nunique()
+    except:
+        nb_observations = len(df)
     use_train_test, mode_message = should_use_train_test_split(nb_observations)
     
     # Affichage du mode d'analyse
@@ -2206,9 +2211,11 @@ if df is not None and lancer_calcul and selected_vars:
             st.error("❌ **Données insuffisantes** pour l'analyse (minimum 10 points)")
             st.stop()
         
-        # Détermination du mode d'analyse
-        use_train_test, mode_message = should_use_train_test_split(len(df_filtered))
-        st.info(mode_message)
+        # Détermination du mode d'analyse — basé sur le nombre de MOIS UNIQUES
+        # (len(df_filtered) = nb de lignes, pas forcément nb de mois)
+        nb_mois_uniques = df_filtered[date_col].dt.to_period('M').nunique()
+        use_train_test, mode_message = should_use_train_test_split(nb_mois_uniques)
+        st.info(f"📊 **{nb_mois_uniques} mois** dans la période sélectionnée — {mode_message}")
         
         # Préparation des données
         X = df_filtered[selected_vars]
@@ -2236,6 +2243,9 @@ if df is not None and lancer_calcul and selected_vars:
         total_combinations = sum(len(list(combinations(selected_vars, n))) for n in range(1, max_features + 1))
         progress_bar = st.progress(0)
         progress_counter = 0
+        rejected_r2_neg = 0
+        rejected_overfit = 0
+        accepted = 0
         
         # Test des combinaisons de variables
         for n in range(1, min(max_features + 1, len(selected_vars) + 1)):
@@ -2245,8 +2255,8 @@ if df is not None and lancer_calcul and selected_vars:
                 
                 X_subset = X[list(combo)]
                 
-                # Split train/test si applicable
-                if use_train_test and len(df_filtered) > 12:
+                # Split train/test si applicable (IPMVP : ≥18 mois requis)
+                if use_train_test and nb_mois_uniques >= 18:
                     train_df, test_df, split_date = create_train_test_split(df_filtered, date_col, train_months_manual)
                     X_train = train_df[list(combo)]
                     y_train = train_df[conso_col]
@@ -2321,8 +2331,9 @@ if df is not None and lancer_calcul and selected_vars:
                             bias_train = calculate_bias_ipmvp(y_train, y_pred_train, bias_decimals)
                             
                             # PROTECTION R² NÉGATIF SUR LE TEST
-                            # R² < 0 = modèle pire qu'une simple moyenne → rejeté systématiquement
-                            if r2_test < -0.5:  # Seuil assoupli : rejet seulement si très négatif
+                            # Seuil très permissif : on garde tout sauf les cas catastrophiques
+                            if r2_test < -1.0:
+                                rejected_r2_neg += 1
                                 continue
                             
                             r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
@@ -2365,7 +2376,8 @@ if df is not None and lancer_calcul and selected_vars:
                             cv_rmse_train = cv_rmse_test = cv_rmse
                             bias_train = bias_test = bias
                         
-                        # Détection d'overfitting et rejet si nécessaire
+                        # Détection d'overfitting : utiliser nb_mois_uniques TOTAL (pas juste train)
+                        # Sinon avec 12 mois de train + 2 vars → ratio=6 → rejet injuste
                         model_info_temp = {
                             'r2': r2,
                             'cv_rmse': cv_rmse,
@@ -2374,10 +2386,13 @@ if df is not None and lancer_calcul and selected_vars:
                             'model_type': m_type
                         }
                         
-                        is_overfitted, warning_msg, severity = detect_overfitting_intelligent(model_info_temp, len(df_filtered))
+                        is_overfitted, warning_msg, severity = detect_overfitting_intelligent(model_info_temp, nb_mois_uniques)
                         
                         if is_overfitted and severity == "error":
+                            rejected_overfit += 1
                             continue
+                        
+                        accepted += 1
                         
                         # Récupération des coefficients - initialisation défensive
                         coefs = {}
@@ -2430,7 +2445,9 @@ if df is not None and lancer_calcul and selected_vars:
                                 'train_bias': bias_train,
                                 'test_bias': bias_test,
                                 'overfitting_train_test': overfitting_detected,
-                                'mode': 'train_test'
+                                'mode': 'train_test',
+                                'train_n': len(X_train),
+                                'test_n': len(X_test),
                             })
                         else:
                             model_info['mode'] = 'standard'
@@ -2452,6 +2469,11 @@ if df is not None and lancer_calcul and selected_vars:
                         continue
         
         progress_bar.empty()
+        
+        # Diagnostic de rejet (aide au débogage si aucun modèle trouvé)
+        total_tested = accepted + rejected_r2_neg + rejected_overfit
+        if total_tested > 0:
+            st.caption(f"🔍 Modèles testés : {total_tested} | ✅ Acceptés : {accepted} | ❌ R² test trop négatif : {rejected_r2_neg} | ⚠️ Overfitting rejeté : {rejected_overfit}")
     
         # TRI DES MODÈLES PAR SCORE COMPOSITE (PAS PAR R² !)
         all_models.sort(key=lambda x: x['ipmvp_score'], reverse=True)
