@@ -1,6 +1,6 @@
 # =============================================================================
 # PARTIE 1 : BASE + AUTHENTIFICATION
-# Application IPMVP Améliorée - Version 2.2 - Scoring IPMVP refondu
+# Application IPMVP Améliorée - Version 2.6 - Seuils IPMVP corrigés + Train/Test ≥18 mois
 # =============================================================================
 
 import streamlit as st
@@ -841,10 +841,12 @@ def format_value(value, fmt=".4f", default="N/A"):
 def should_use_train_test_split(nb_observations):
     """
     Détermine si on doit utiliser un split train/test.
-    Activé dès que >12 mois de données disponibles (train=12 min, test=reste ≥1 mois).
+    Activé dès que ≥18 mois de données disponibles (conforme IPMVP : train=12 min + test≥6 mois).
     """
-    if nb_observations > 12:
+    if nb_observations >= 18:
         return True, f"🚀 Mode validation robuste: Split train/test activé ({nb_observations} mois)"
+    elif nb_observations > 12:
+        return False, f"📋 Mode IPMVP standard : {nb_observations} mois — split non activé (< 18 mois requis)"
     elif nb_observations == 12:
         return False, f"📋 Mode IPMVP standard : exactement 12 mois — pas de split possible (test = 0)"
     else:
@@ -1325,7 +1327,7 @@ st.markdown("""
 <ul>
     <li><strong>🛡️ Détection d'overfitting intelligente</strong> : Rejet automatique des modèles avec R² artificiellement gonflé</li>
     <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-70 points (R² + CV(RMSE) + simplicité + significativité)</li>
-    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique activé dès >12 mois de données (12 train + reste en test)</li>
+    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique activé dès ≥18 mois de données (12 train min + ≥6 test)</li>
     <li><strong>⚠️ Limitations sécurité</strong> : Contrôle du ratio observations/variables (règle 10:1)</li>
     <li><strong>📊 Métriques enrichies</strong> : Comparaison train/test, valeurs t de Student, warnings intelligents</li>
 </ul>
@@ -1921,7 +1923,7 @@ if df is not None and lancer_calcul and selected_vars:
                     X_subset = X[list(combo)]
                     
                     # Split train/test si applicable
-                    if use_train_test and len(period_df) > 12:
+                    if use_train_test and len(period_df) >= 18:
                         train_df, test_df, split_date = create_train_test_split(period_df, date_col, train_months_manual)
                         X_train = train_df[list(combo)]
                         y_train = train_df[conso_col]
@@ -2598,25 +2600,32 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             # Statuts test
             r2_ok   = "✅" if test_r2_val  >= 0.75 else ("⚠️" if test_r2_val  >= 0.60 else "❌")
             cv_ok   = "✅" if test_cv_val  <= 0.20 else ("⚠️" if test_cv_val  <= 0.30 else "❌")
-            bias_ok = "✅" if abs(test_bias_val) <= 0.5 else ("⚠️" if abs(test_bias_val) <= 5 else "❌")
+            bias_ok = "✅" if abs(test_bias_val) <= 5 else ("⚠️" if abs(test_bias_val) <= 10 else "❌")
             
             col_train, col_test = st.columns(2)
             with col_train:
-                train_bias_display = f"≈ 0.00% (OLS)" if abs(train_bias_val) < 0.01 else f"{train_bias_val:.{bias_decimals}f}%"
+                # Affichage biais train : OLS → toujours ≈ 0, Ridge/Lasso → valeur réelle
+                if best_metrics.get('model_type') == "Linéaire" and abs(train_bias_val) < 0.05:
+                    train_bias_display = f"≈ 0.00% (OLS)"
+                    train_bias_note = "ℹ️ Le biais OLS sur le train est toujours ≈ 0 par construction mathématique"
+                    tbias_ok = "ℹ️"
+                else:
+                    train_bias_display = f"{train_bias_val:.{bias_decimals}f}%"
+                    train_bias_note = "ℹ️ Biais sur données d'entraînement (non IPMVP de référence)"
+                    tbias_ok = "✅" if abs(train_bias_val) <= 5 else ("⚠️" if abs(train_bias_val) <= 10 else "❌")
                 # Statuts train
                 tr2_ok  = "✅" if train_r2_val  >= 0.75 else ("⚠️" if train_r2_val  >= 0.60 else "❌")
                 tcv_ok  = "✅" if train_cv_val  <= 0.20 else ("⚠️" if train_cv_val  <= 0.30 else "❌")
-                st.markdown(f"""
                 <div style="background-color: rgba(150, 185, 29, 0.1); border-left: 4px solid #96B91D; padding: 15px; border-radius: 8px;">
                     <h4 style="color: #96B91D; margin: 0 0 12px 0;">🎯 PÉRIODE D'ENTRAÎNEMENT (TRAIN)</h4>
-                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {train_df_temp[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {train_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {train_df_temp[date_col].min().strftime('%b %Y')} &nbsp;→&nbsp; <strong>Au :</strong> {train_df_temp[date_col].max().strftime('%b %Y')}</p>
                     <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(train_df_temp)} mois</p>
                     <hr style="border:1px solid #96B91D44; margin:10px 0;">
                     <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
                         <tr style="background:#96B91D22;">
                             <th style="padding:6px 8px; text-align:left;">Métrique</th>
                             <th style="padding:6px 8px; text-align:center;">Valeur</th>
-                            <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                            <th style="padding:6px 8px; text-align:center;">Seuil IPMVP</th>
                             <th style="padding:6px 8px; text-align:center;">Statut</th>
                         </tr>
                         <tr>
@@ -2634,11 +2643,11 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         <tr>
                             <td style="padding:6px 8px;">Biais (%)</td>
                             <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_bias_display}</td>
-                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
-                            <td style="padding:6px 8px; text-align:center;">ℹ️</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
+                            <td style="padding:6px 8px; text-align:center;">{tbias_ok}</td>
                         </tr>
                     </table>
-                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Le biais OLS sur le train est toujours ≈ 0 par construction mathématique</p>
+                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">{train_bias_note}</p>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -2646,14 +2655,14 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                 st.markdown(f"""
                 <div style="background-color: rgba(109, 186, 188, 0.1); border-left: 4px solid #6DBABC; padding: 15px; border-radius: 8px;">
                     <h4 style="color: #6DBABC; margin: 0 0 12px 0;">🧪 PÉRIODE DE TEST (VALIDATION)</h4>
-                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {test_df_temp[date_col].min().strftime('%d/%m/%Y')} &nbsp;→&nbsp; <strong>Au :</strong> {test_df_temp[date_col].max().strftime('%d/%m/%Y')}</p>
+                    <p style="margin: 4px 0;">📅 <strong>Du :</strong> {test_df_temp[date_col].min().strftime('%b %Y')} &nbsp;→&nbsp; <strong>Au :</strong> {test_df_temp[date_col].max().strftime('%b %Y')}</p>
                     <p style="margin: 4px 0;">📊 <strong>Observations :</strong> {len(test_df_temp)} mois</p>
                     <hr style="border:1px solid #6DBABC44; margin:10px 0;">
                     <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
                         <tr style="background:#6DBABC22;">
                             <th style="padding:6px 8px; text-align:left;">Métrique</th>
                             <th style="padding:6px 8px; text-align:center;">Valeur</th>
-                            <th style="padding:6px 8px; text-align:center;">Seuil</th>
+                            <th style="padding:6px 8px; text-align:center;">Seuil IPMVP</th>
                             <th style="padding:6px 8px; text-align:center;">Statut</th>
                         </tr>
                         <tr>
@@ -2671,7 +2680,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         <tr>
                             <td style="padding:6px 8px; font-weight:bold; color:#00485F;">Biais (%) ⭐</td>
                             <td style="padding:6px 8px; text-align:center; font-weight:bold; font-size:1.1em;">{test_bias_val:.{bias_decimals}f}%</td>
-                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 0.5%</td>
+                            <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                             <td style="padding:6px 8px; text-align:center; font-size:1.2em;">{bias_ok}</td>
                         </tr>
                     </table>
@@ -3336,15 +3345,14 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.5 - Métriques Train/Test par période ! 🎉</strong></p>
-    <p><strong>🔧 Nouveautés v2.5 :</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.6 - Seuils IPMVP corrigés + Train/Test ≥18 mois ! 🎉</strong></p>
+    <p><strong>🔧 Nouveautés v2.6 :</strong></p>
     <ul style="text-align: left; display: inline-block;">
-        <li>✅ Carte TRAIN : dates + R², CV(RMSE), Biais propres à la période d'entraînement</li>
-        <li>✅ Carte TEST : dates + R², CV(RMSE), Biais propres à la période de test (⭐ indicateurs IPMVP)</li>
-        <li>✅ Écart R² Train/Test affiché avec diagnostic overfitting</li>
-        <li>✅ Suppression du bloc "Métriques détaillées" redondant</li>
-        <li>✅ Bugs train/test corrigés (v2.4.1)</li>
-        <li>✅ Split activé dès >12 mois, default_train=12 mois</li>
+        <li>✅ Mode Train/Test déclenché dès ≥18 mois (conforme IPMVP — au lieu de >12)</li>
+        <li>✅ Seuil CV(RMSE) affiché à ≤ 0.20 (confirmé)</li>
+        <li>✅ Seuil Biais corrigé à ≤ 5% (standard IPMVP officiel)</li>
+        <li>✅ Biais TRAIN affiché avec statut réel (Ridge/Lasso) au lieu de toujours ℹ️</li>
+        <li>✅ Dates affichées en format Mois/Année (lisibilité améliorée)</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
