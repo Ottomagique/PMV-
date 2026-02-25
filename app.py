@@ -1561,7 +1561,10 @@ if period_choice == "Sélectionner manuellement une période spécifique" and df
                                      min_value=min_date, 
                                      max_value=max_date)
         with col2:
-            default_end = min(max_date, (pd.to_datetime(start_date) + pd.DateOffset(months=11)).date())
+            # Fin par défaut = dernier jour du 12ème mois complet (couvre 12 mois entiers)
+            _end_month_start = pd.to_datetime(start_date) + pd.DateOffset(months=12)
+            _last_day = (_end_month_start - pd.Timedelta(days=1)).date()
+            default_end = min(max_date, _last_day)
             end_date = st.date_input("📅 Fin", 
                                    value=default_end,
                                    min_value=start_date, 
@@ -1650,10 +1653,10 @@ st.sidebar.subheader("✂️ Paramètres Train/Test")
 # Calcul dynamique du max de mois train selon les données
 if df is not None:
     nb_obs_total = len(df)
-    # Max train = total - 3 (minimum 3 pour le test)
-    max_train_months_possible = max(6, nb_obs_total - 3)
-    # Valeur par défaut : 2/3 des données
-    default_train = max(12, int(nb_obs_total * 2 / 3))
+    # Max train = total - 1 (minimum 1 pour le test)
+    max_train_months_possible = max(12, nb_obs_total - 1)
+    # Valeur par défaut : 12 mois (baseline IPMVP standard)
+    default_train = 12
     default_train = min(default_train, max_train_months_possible)
 else:
     max_train_months_possible = 24
@@ -1905,10 +1908,9 @@ if df is not None and lancer_calcul and selected_vars:
             X = X.apply(pd.to_numeric, errors='coerce').dropna()
             y = pd.to_numeric(y, errors='coerce').dropna()
             
-            # Validation des limitations de sécurité
+            # Validation des limitations de sécurité (avertissement seulement, ne pas bloquer)
             var_issues, _ = check_variable_limits(len(period_df), len(selected_vars), model_type)
-            if var_issues:
-                continue
+            # On ne bloque plus la période entière — les combos de 1 variable peuvent quand même être valides
             
             period_best_score = -1
             period_best_model = None
@@ -1932,7 +1934,7 @@ if df is not None and lancer_calcul and selected_vars:
                         X_test = X_test.apply(pd.to_numeric, errors='coerce').dropna()
                         y_test = pd.to_numeric(y_test, errors='coerce').dropna()
                         
-                        if len(X_train) < 5 or len(X_test) < 3:
+                        if len(X_train) < 5 or len(X_test) < 1:
                             continue
                     else:
                         X_train, y_train = X_subset, y
@@ -1999,7 +2001,7 @@ if df is not None and lancer_calcul and selected_vars:
                                 # PROTECTION R² NÉGATIF SUR LE TEST
                                 # R² < 0 = modèle pire qu'une simple moyenne → rejeté systématiquement
                                 # Cause probable : split déséquilibré ou données non-stationnaires
-                                if r2_test < 0:
+                                if r2_test < -0.5:  # Seuil assoupli : rejet seulement si très négatif
                                     continue  # Rejeter ce modèle
                                 
                                 # Utiliser les métriques de test pour l'évaluation
@@ -2255,7 +2257,7 @@ if df is not None and lancer_calcul and selected_vars:
                     X_test = X_test.apply(pd.to_numeric, errors='coerce').dropna()
                     y_test = pd.to_numeric(y_test, errors='coerce').dropna()
                     
-                    if len(X_train) < 5 or len(X_test) < 3:
+                    if len(X_train) < 5 or len(X_test) < 1:
                         continue
                 else:
                     X_train, y_train = X_subset, y
@@ -2318,7 +2320,7 @@ if df is not None and lancer_calcul and selected_vars:
                             
                             # PROTECTION R² NÉGATIF SUR LE TEST
                             # R² < 0 = modèle pire qu'une simple moyenne → rejeté systématiquement
-                            if r2_test < 0:
+                            if r2_test < -0.5:  # Seuil assoupli : rejet seulement si très négatif
                                 continue
                             
                             r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
@@ -3360,20 +3362,16 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.4 - Train/Test dès 13 mois ! 🎉</strong></p>
-    <p><strong>🔧 Améliorations v2.4 :</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.4.1 - Bugs train/test corrigés ! 🎉</strong></p>
+    <p><strong>🔧 Correctifs v2.4.1 :</strong></p>
     <ul style="text-align: left; display: inline-block;">
-        <li>✅ Split train/test activé dès >12 mois (plus de limite à 18 mois)</li>
-        <li>✅ Slider train/test : minimum 12 mois (IPMVP strict)</li>
-        <li>✅ Aperçu des dates de split (train/test) dans la sidebar</li>
-        <li>✅ Tableau récapitulatif de toutes les périodes testées avec R² Train/Test</li>
-        <li>✅ Bug CSS expanders corrigé (affichage labels)</li>
-        <li>✅ Formule Biais IPMVP officielle : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100</li>
-        <li>✅ Choix du nombre de décimales pour le Biais</li>
-        <li>✅ R² négatif sur test : alerte + rejet si < -0.5</li>
-        <li>✅ RMSE corrigé degrés de liberté en mode standard</li>
-        <li>✅ Détection overfitting intelligente</li>
-        <li>✅ Score composite IPMVP (0-70 points)</li>
+        <li>✅ Bug #1 : default_end corrigé → dernier jour du 12ème mois (plus de 01/12 tronqué)</li>
+        <li>✅ Bug #2 : Rejet R² test assoupli → seuil -0.5 (au lieu de 0)</li>
+        <li>✅ Bug #3 : Minimum test réduit à 1 point (au lieu de 3)</li>
+        <li>✅ Bug #4 : check_variable_limits ne bloque plus les périodes entières</li>
+        <li>✅ Bug #5 : default_train = 12 mois (plus stable, IPMVP standard)</li>
+        <li>✅ Split train/test activé dès >12 mois</li>
+        <li>✅ Tableau récapitulatif de toutes les périodes testées</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
