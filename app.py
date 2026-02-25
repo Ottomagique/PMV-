@@ -2616,6 +2616,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                 # Statuts train
                 tr2_ok  = "✅" if train_r2_val  >= 0.75 else ("⚠️" if train_r2_val  >= 0.60 else "❌")
                 tcv_ok  = "✅" if train_cv_val  <= 0.20 else ("⚠️" if train_cv_val  <= 0.30 else "❌")
+                st.markdown(f"""
                 <div style="background-color: rgba(150, 185, 29, 0.1); border-left: 4px solid #96B91D; padding: 15px; border-radius: 8px;">
                     <h4 style="color: #96B91D; margin: 0 0 12px 0;">🎯 PÉRIODE D'ENTRAÎNEMENT (TRAIN)</h4>
                     <p style="margin: 4px 0;">📅 <strong>Du :</strong> {train_df_temp[date_col].min().strftime('%b %Y')} &nbsp;→&nbsp; <strong>Au :</strong> {train_df_temp[date_col].max().strftime('%b %Y')}</p>
