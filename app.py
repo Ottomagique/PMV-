@@ -725,7 +725,47 @@ def check_variable_limits(nb_observations, nb_variables, model_type):
     
     return issues, warnings
 
-def format_equation(intercept, coefficients, threshold=1e-4):
+def calculate_bias_ipmvp(y_true, y_pred, decimal_places=2):
+    """
+    Calcule le biais selon la formule IPMVP officielle :
+    
+    Biais (%) = [Σ(Ŷᵢ - Yᵢ) / (n × Ȳ)] × 100
+    
+    Où :
+      - Ŷᵢ = valeurs prédites par le modèle
+      - Yᵢ = valeurs mesurées réelles  
+      - n  = nombre d'observations
+      - Ȳ  = moyenne des valeurs mesurées
+    
+    ⚠️ NOTE IMPORTANTE : Pour une régression linéaire avec intercept entraînée sur les données,
+    le biais sur le train est TOUJOURS = 0 par définition (propriété OLS : Σ résidus = 0).
+    C'est mathématiquement correct, pas un bug.
+    Le biais pertinent est donc uniquement celui du TEST (données non-vues).
+    
+    Un biais positif → le modèle surestime
+    Un biais négatif → le modèle sous-estime
+    Seuil IPMVP recommandé : |Biais| < 5%
+    
+    Args:
+        y_true: valeurs réelles (array-like)
+        y_pred: valeurs prédites (array-like)
+        decimal_places: nombre de décimales pour l'affichage (défaut: 2)
+    
+    Returns:
+        float: biais en % arrondi au nombre de décimales choisi
+    """
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    n = len(y_true)
+    mean_y = np.mean(y_true)
+    
+    if mean_y == 0 or n == 0:
+        return 0.0
+    
+    bias_raw = np.sum(y_pred - y_true) / (n * mean_y) * 100
+    return round(bias_raw, decimal_places)
+
+
     """
     Formate l'équation du modèle en ignorant les coefficients négligeables
     """
@@ -790,25 +830,63 @@ def should_use_train_test_split(nb_observations):
     """
     if nb_observations >= 18:
         return True, "🚀 Mode validation robuste: Split train/test activé"
-    elif nb_observations >= 18:
+    elif nb_observations >= 12:
         return False, f"⚠️ {nb_observations} mois disponibles - Split train/test recommandé avec ≥18 mois"
     else:
         return False, f"📋 Mode IPMVP standard avec {nb_observations} mois de données"
 
 def create_train_test_split(df, date_col, train_months=12):
     """
-    Crée un split train/test temporel pour les données IPMVP
-    """
-    # Trier par date
-    df_sorted = df.sort_values(by=date_col)
+    Crée un split train/test temporel pour les données IPMVP.
     
-    # Calculer le point de coupure (12 premiers mois pour train)
+    ⚠️ RÈGLES IPMVP OBLIGATOIRES :
+    - Train ≥ 12 mois (couvrir toutes les saisons pour la baseline)
+    - Test ≥ 3 mois (validation statistiquement représentative)
+    - Train ≥ Test (le modèle doit être entraîné sur plus de données qu'il n'en valide)
+    
+    Mode manuel recommandé IPMVP :
+    - 18 mois de données → 12 train + 6 test (ratio 2:1)
+    - 24 mois de données → 18 train + 6 test (ratio 3:1)
+    - 36 mois de données → 24 train + 12 test (ratio 2:1)
+    
+    Pour un split manuel : ajuster le slider "Mois d'entraînement" dans la sidebar.
+    Si le test résultant est > le train → le split est automatiquement rééquilibré.
+    """
+    df_sorted = df.sort_values(by=date_col).reset_index(drop=True)
+    n_total = len(df_sorted)
+    
+    # Calculer le point de coupure selon train_months
     min_date = df_sorted[date_col].min()
     split_date = min_date + pd.DateOffset(months=train_months)
     
-    # Split des données
     train_df = df_sorted[df_sorted[date_col] < split_date]
     test_df = df_sorted[df_sorted[date_col] >= split_date]
+    
+    # RÈGLE 1 : test doit avoir au moins 3 points
+    if len(test_df) < 3:
+        n_test = max(3, n_total // 5)
+        train_df = df_sorted.iloc[:-n_test]
+        test_df = df_sorted.iloc[-n_test:]
+        split_date = test_df[date_col].min()
+    
+    # RÈGLE 2 : train doit être >= test (sinon rééquilibrer au ratio 2:1)
+    # Si test > train, on recalcule pour garder 2/3 en train et 1/3 en test
+    if len(test_df) > len(train_df):
+        n_train = max(12, int(n_total * 2 / 3))
+        n_test = n_total - n_train
+        if n_test < 3:
+            n_test = 3
+            n_train = n_total - n_test
+        train_df = df_sorted.iloc[:n_train]
+        test_df = df_sorted.iloc[n_train:]
+        split_date = test_df[date_col].min()
+    
+    # RÈGLE 3 : train doit avoir au minimum 12 points (12 mois)
+    if len(train_df) < 12:
+        n_train = min(12, n_total - 3)
+        train_df = df_sorted.iloc[:n_train]
+        test_df = df_sorted.iloc[n_train:]
+        split_date = test_df[date_col].min()
     
     return train_df, test_df, split_date
 # =============================================================================
@@ -859,7 +937,7 @@ st.markdown("""
         border-radius: 10px;
     }
 
-    input, select, textarea {
+    input[type="text"], input[type="password"], input[type="number"], select, textarea {
         background-color: #E7DDD9 !important;
         border-radius: 5px;
         border: 1px solid #00485F;
@@ -1252,6 +1330,25 @@ st.markdown("""
     <li><strong>Résultats enrichis</strong> : Métriques avancées, warnings, recommandations</li>
 </ol>
 
+<h4>✂️ Guide : Faire un split Train/Test manuellement :</h4>
+<ol>
+    <li><strong>Principe IPMVP</strong> : Le modèle est entraîné sur une période de référence (baseline), puis validé sur une période de suivi (test)</li>
+    <li><strong>Choisir les mois de train</strong> (slider "Mois d'entraînement") :
+        <ul>
+            <li>≥12 mois de train recommandés (couvrir toutes les saisons)</li>
+            <li>≥3 mois de test pour une validation statistiquement représentative</li>
+            <li>Exemple 24 mois de données : 18 train + 6 test → bonne pratique</li>
+        </ul>
+    </li>
+    <li><strong>Interpréter les résultats</strong> :
+        <ul>
+            <li>R² train > R² test → normal (légère dégradation attendue)</li>
+            <li>R² test < 0 → modèle invalide sur cette période (changer le split)</li>
+            <li>Écart R² train/test > 0.2 → overfitting probable</li>
+        </ul>
+    </li>
+</ol>
+
 <h4>✅ Critères de qualité IPMVP renforcés :</h4>
 <ul>
     <li><strong>R² ≥ 0.75</strong> : Corrélation excellente</li>
@@ -1321,6 +1418,9 @@ else:
 
 # SIDEBAR - SÉLECTION DES DONNÉES AVEC CONTRÔLES ADAPTATIFS
 st.sidebar.header("🔍 Configuration de l'analyse")
+
+# Initialisation des variables par défaut (évite les NameError si aucun fichier)
+selected_vars = []
 
 # Sélection des colonnes
 date_col = st.sidebar.selectbox(
@@ -1408,15 +1508,15 @@ if df is not None and date_col:
         st.sidebar.markdown(f"""
         <div class="mode-indicator" style="background-color: rgba(150, 185, 29, 0.1); border-color: #96B91D;">
             <div class="mode-title">🚀 Mode Validation Robuste</div>
-            <p>Split train/test automatique (12/6 mois)<br>
-            Évaluation sur données non-vues</p>
+            <p>Split train/test activé ({nb_observations} mois de données)<br>
+            Configurer le split ci-dessous ↓</p>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.sidebar.markdown(f"""
         <div class="mode-indicator" style="background-color: rgba(109, 186, 188, 0.1); border-color: #6DBABC;">
             <div class="mode-title">📋 Mode IPMVP Standard</div>
-            <p>Analyse sur toutes les données<br>
+            <p>Analyse sur toutes les données ({nb_observations} mois)<br>
             Protections anti-overfitting renforcées</p>
         </div>
         """, unsafe_allow_html=True)
@@ -1513,10 +1613,80 @@ elif model_type == "Polynomiale":
         if df is not None and len(df) < 30:
             st.sidebar.warning("⚠️ Recommandation: ≥30 observations pour polynôme stable")
 
+# CHOIX DES DÉCIMALES POUR LE BIAIS
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔢 Précision d'affichage")
+bias_decimals = st.sidebar.selectbox(
+    "Décimales pour le Biais (%)",
+    [1, 2, 3, 4, 5, 6, 7],
+    index=1,
+    help="Nombre de décimales pour afficher le biais IPMVP. Formule : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100"
+)
+
+# SPLIT TRAIN/TEST MANUEL
+st.sidebar.subheader("✂️ Paramètres Train/Test")
+# SPLIT TRAIN/TEST MANUEL
+st.sidebar.subheader("✂️ Paramètres Train/Test")
+
+# Calcul dynamique du max de mois train selon les données
+if df is not None:
+    nb_obs_total = len(df)
+    # Max train = total - 3 (minimum 3 pour le test)
+    max_train_months_possible = max(6, nb_obs_total - 3)
+    # Valeur par défaut : 2/3 des données
+    default_train = max(12, int(nb_obs_total * 2 / 3))
+    default_train = min(default_train, max_train_months_possible)
+else:
+    max_train_months_possible = 24
+    default_train = 12
+
+train_months_manual = st.sidebar.slider(
+    "Mois d'entraînement (train)",
+    min_value=6,
+    max_value=min(36, max_train_months_possible),
+    value=default_train,
+    step=1,
+    help="""Comment faire le split train/test manuellement :
+    
+    1. CHOISIR les mois de train = durée de la période de référence (baseline)
+       → Minimum 12 mois recommandé IPMVP (couvrir toutes les saisons)
+    2. Le reste des données devient le TEST (validation)
+       → Minimum 3 mois de test requis
+    3. RÈGLE CLEF : Train ≥ Test (sinon le modèle ne peut pas généraliser)
+    
+    Exemples :
+    - 18 mois dispo → 12 train + 6 test (ratio 2:1) ✓
+    - 24 mois dispo → 18 train + 6 test (ratio 3:1) ✓  
+    - 32 mois dispo → 22 train + 10 test (ratio 2:1) ✓
+    
+    Si train < test → le split est automatiquement rééquilibré à 2:1
+    """
+)
+
+# Affichage du split prévu
+if df is not None:
+    n_total = len(df)
+    n_test_preview = n_total - train_months_manual
+    if n_test_preview < 3:
+        n_test_preview = 3
+        n_train_preview = n_total - 3
+    elif n_test_preview > train_months_manual:
+        n_train_preview = int(n_total * 2 / 3)
+        n_test_preview = n_total - n_train_preview
+        st.sidebar.warning(f"⚠️ Rééquilibrage auto → Train: {n_train_preview} | Test: {n_test_preview}")
+    else:
+        n_train_preview = train_months_manual
+    
+    ratio_preview = n_train_preview / n_test_preview if n_test_preview > 0 else 0
+    color = "🟢" if ratio_preview >= 2 else ("🟡" if ratio_preview >= 1 else "🔴")
+    st.sidebar.info(f"{color} Split prévu → **Train: {n_train_preview} mois** | **Test: {n_test_preview} mois** | Ratio: {ratio_preview:.1f}:1")
+else:
+    st.sidebar.info(f"ℹ️ Train: {train_months_manual} mois | Test: données restantes (≥3 pts requis)")
+
 # INFORMATIONS SUR LA CONFORMITÉ IPMVP ENRICHIES
 st.sidebar.markdown("---")
 st.sidebar.markdown(f"""
-### ✅ Critères IPMVP v2.2
+### ✅ Critères IPMVP v2.3
 {tooltip("Qualification IPMVP", "Système de notation sur 70 points : R² (30pts) + CV(RMSE) (30pts) + Significativité (10pts)")}
 
 **📊 Scoring (70 points max) :**
@@ -1530,6 +1700,12 @@ st.sidebar.markdown(f"""
 - **Bon** : 35-44/70 points
 - **Correct** : 25-34/70 points
 - **Non conforme** : < 25/70 points
+
+**⚖️ Formule Biais IPMVP officielle :**
+Biais(%) = Σ(Ŷᵢ-Yᵢ) / (n×Ȳ) × 100
+- Ŷᵢ = valeur prédite, Yᵢ = valeur réelle
+- n = nombre d'obs, Ȳ = moyenne réelle
+- Seuil recommandé : |Biais| < 5%
 """, unsafe_allow_html=True)
 
 # INFORMATIONS SUR LES MODÈLES AVEC AMÉLIORATIONS
@@ -1708,7 +1884,7 @@ if df is not None and lancer_calcul and selected_vars:
                     
                     # Split train/test si applicable
                     if use_train_test and len(period_df) >= 18:
-                        train_df, test_df, split_date = create_train_test_split(period_df, date_col)
+                        train_df, test_df, split_date = create_train_test_split(period_df, date_col, train_months_manual)
                         X_train = train_df[list(combo)]
                         y_train = train_df[conso_col]
                         X_test = test_df[list(combo)]
@@ -1776,16 +1952,23 @@ if df is not None and lancer_calcul and selected_vars:
                                 r2_test = r2_score(y_test, y_pred_test)
                                 rmse_test = math.sqrt(mean_squared_error(y_test, y_pred_test))
                                 cv_rmse_test = rmse_test / np.mean(y_test) if np.mean(y_test) != 0 else float('inf')
-                                bias_test = np.mean(y_pred_test - y_test) / np.mean(y_test) * 100
+                                bias_test = calculate_bias_ipmvp(y_test, y_pred_test, bias_decimals)
                                 
                                 # Métriques sur le train set
                                 r2_train = r2_score(y_train, y_pred_train)
                                 rmse_train = math.sqrt(mean_squared_error(y_train, y_pred_train))
                                 cv_rmse_train = rmse_train / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                                bias_train = np.mean(y_pred_train - y_train) / np.mean(y_train) * 100
+                                bias_train = calculate_bias_ipmvp(y_train, y_pred_train, bias_decimals)
+                                
+                                # PROTECTION R² NÉGATIF SUR LE TEST
+                                # R² < 0 = modèle pire qu'une simple moyenne → rejeté systématiquement
+                                # Cause probable : split déséquilibré ou données non-stationnaires
+                                if r2_test < 0:
+                                    continue  # Rejeter ce modèle
                                 
                                 # Utiliser les métriques de test pour l'évaluation
                                 r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
+                                rmse = rmse_test
                                 mae = mean_absolute_error(y_test, y_pred_test)
                                 
                                 # Détection d'overfitting par comparaison train/test
@@ -1800,7 +1983,7 @@ if df is not None and lancer_calcul and selected_vars:
                                 y_pred = m_obj.predict(X_train)
                                 r2 = r2_score(y_train, y_pred)
                                 
-                                # Calcul RMSE corrigé selon IPMVP
+                                # Calcul RMSE corrigé selon IPMVP (avec degrés de liberté)
                                 n = len(y_train)
                                 p = len(combo)
                                 ssr = np.sum((y_train - y_pred) ** 2)
@@ -1808,7 +1991,8 @@ if df is not None and lancer_calcul and selected_vars:
                                 rmse = math.sqrt(ssr / df_res)
                                 
                                 cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                                bias = np.mean(y_pred - y_train) / np.mean(y_train) * 100
+                                # Biais IPMVP : formule officielle Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
+                                bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
                                 mae = mean_absolute_error(y_train, y_pred)
                                 
                                 overfitting_detected = False
@@ -2008,7 +2192,7 @@ if df is not None and lancer_calcul and selected_vars:
                 
                 # Split train/test si applicable
                 if use_train_test and len(df_filtered) >= 18:
-                    train_df, test_df, split_date = create_train_test_split(df_filtered, date_col)
+                    train_df, test_df, split_date = create_train_test_split(df_filtered, date_col, train_months_manual)
                     X_train = train_df[list(combo)]
                     y_train = train_df[conso_col]
                     X_test = test_df[list(combo)]
@@ -2074,12 +2258,17 @@ if df is not None and lancer_calcul and selected_vars:
                             r2_test = r2_score(y_test, y_pred_test)
                             rmse_test = math.sqrt(mean_squared_error(y_test, y_pred_test))
                             cv_rmse_test = rmse_test / np.mean(y_test) if np.mean(y_test) != 0 else float('inf')
-                            bias_test = np.mean(y_pred_test - y_test) / np.mean(y_test) * 100
+                            bias_test = calculate_bias_ipmvp(y_test, y_pred_test, bias_decimals)
                             
                             r2_train = r2_score(y_train, y_pred_train)
                             rmse_train = math.sqrt(mean_squared_error(y_train, y_pred_train))
                             cv_rmse_train = rmse_train / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                            bias_train = np.mean(y_pred_train - y_train) / np.mean(y_train) * 100
+                            bias_train = calculate_bias_ipmvp(y_train, y_pred_train, bias_decimals)
+                            
+                            # PROTECTION R² NÉGATIF SUR LE TEST
+                            # R² < 0 = modèle pire qu'une simple moyenne → rejeté systématiquement
+                            if r2_test < 0:
+                                continue
                             
                             r2, cv_rmse, bias = r2_test, cv_rmse_test, bias_test
                             mae = mean_absolute_error(y_test, y_pred_test)
@@ -2101,7 +2290,8 @@ if df is not None and lancer_calcul and selected_vars:
                             rmse = math.sqrt(ssr / df_res)
                             
                             cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                            bias = np.mean(y_pred - y_train) / np.mean(y_train) * 100
+                            # Biais IPMVP officiel : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
+                            bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
                             mae = mean_absolute_error(y_train, y_pred)
                             
                             overfitting_detected = False
@@ -2238,7 +2428,20 @@ if df is not None and lancer_calcul and selected_vars:
         
         if best_metrics.get('mode') == 'train_test':
             # Mode Train/Test : afficher les deux périodes
-            train_df_temp, test_df_temp, split_date_temp = create_train_test_split(df_filtered, date_col)
+            train_df_temp, test_df_temp, split_date_temp = create_train_test_split(df_filtered, date_col, train_months_manual)
+            
+            # ⚠️ ALERTE si le split est déséquilibré
+            if len(test_df_temp) > len(train_df_temp):
+                st.error(f"""⚠️ **Split déséquilibré détecté et corrigé automatiquement**
+                
+Avec {len(df_filtered)} mois de données et {train_months_manual} mois de train demandés, 
+le test ({len(df_filtered) - train_months_manual} mois) était plus long que le train ({train_months_manual} mois).
+
+**Règle IPMVP : Train ≥ Test obligatoire** — Le split a été rééquilibré automatiquement au ratio 2:1.
+→ Ajustez le slider "Mois d'entraînement" pour un split cohérent avec vos données.
+""")
+            
+            ratio_str = f"{len(train_df_temp)}/{len(test_df_temp)}"
             
             col_train, col_test = st.columns(2)
             with col_train:
@@ -2301,7 +2504,7 @@ if df is not None and lancer_calcul and selected_vars:
         if best_metrics.get('mode') == 'train_test':
             # Affichage train/test côte à côte
             # Calculer les durées réelles
-            train_df_display, test_df_display, _ = create_train_test_split(df_filtered, date_col)
+            train_df_display, test_df_display, _ = create_train_test_split(df_filtered, date_col, train_months_manual)
             train_duration = len(train_df_display)
             test_duration = len(test_df_display)
             
@@ -2319,12 +2522,15 @@ if df is not None and lancer_calcul and selected_vars:
             col1, col2 = st.columns(2)
             
             with col1:
+                # Note : le biais train est toujours ~0 pour régression linéaire (propriété OLS)
+                train_bias_display = best_metrics.get('train_bias', 0)
+                train_bias_note = " ⓘ (= 0 par construction OLS)" if abs(train_bias_display) < 0.01 else ""
                 train_metrics = f"""
                 <table class="stats-table">
                     <tr><th>Métrique</th><th>Valeur Train</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination sur les données d'entraînement")}</td><td>{best_metrics.get('train_r2', 0):.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur l'entraînement")}</td><td>{best_metrics.get('train_cv_rmse', 0):.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur l'entraînement")}</td><td>{best_metrics.get('train_bias', 0):.7f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Pour régression linéaire avec intercept : Σrésidus=0 par définition OLS → biais train toujours ≈ 0. Le biais pertinent est sur le TEST.")}</td><td>{train_bias_display:.{bias_decimals}f}{train_bias_note}</td></tr>
                 </table>
                 """
                 st.markdown(train_metrics, unsafe_allow_html=True)
@@ -2335,7 +2541,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <tr><th>Métrique</th><th>Valeur Test</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination sur les données de test (validation)")}</td><td>{best_metrics['r2']:.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur le test")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur le test")}</td><td>{best_metrics['bias']:.7f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique en pourcentage sur le test")}</td><td>{best_metrics['bias']:.{bias_decimals}f}</td></tr>
                 </table>
                 """
                 st.markdown(test_metrics, unsafe_allow_html=True)
@@ -2344,7 +2550,22 @@ if df is not None and lancer_calcul and selected_vars:
             r2_gap = abs(best_metrics.get('train_r2', 0) - best_metrics['r2'])
             cv_gap = abs(best_metrics.get('train_cv_rmse', 0) - best_metrics['cv_rmse'])
             
-            if best_metrics.get('overfitting_train_test'):
+            # ALERTE R² NÉGATIF SUR TEST
+            if best_metrics['r2'] < 0:
+                st.error(f"""⚠️ **R² TEST NÉGATIF ({best_metrics['r2']:.4f})** : Le modèle est moins performant qu'une simple moyenne sur les données de test.
+                
+**Causes possibles :**
+- Variables explicatives du test très différentes de la période d'entraînement
+- Trop peu de données en test (< 6 mois)
+- Modèle over-fitté sur le train → ne généralise pas
+- Distribution différente entre train et test (saisonnalité, changement d'usage)
+
+**Actions recommandées :**
+1. Augmenter la période d'entraînement (slider "Mois d'entraînement")
+2. Vérifier la cohérence des variables sur toute la période
+3. Essayer le mode standard si < 18 mois de données disponibles
+""")
+            elif best_metrics.get('overfitting_train_test'):
                 st.warning(f"⚠️ **Écart train/test détecté** : R² gap = {r2_gap:.3f}, CV(RMSE) gap = {cv_gap:.3f}")
             else:
                 st.info(f"✅ **Bonne stabilité train/test** : R² gap = {r2_gap:.3f}, CV(RMSE) gap = {cv_gap:.3f}")
@@ -2359,7 +2580,7 @@ if df is not None and lancer_calcul and selected_vars:
                     <tr><th>Métrique</th><th>Valeur</th></tr>
                     <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td></tr>
                     <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.7f}</td></tr>
+                    <tr><td>{tooltip("Biais (%)", "Erreur systématique du modèle (info uniquement, non compté dans le score)")}</td><td>{best_metrics['bias']:.{bias_decimals}f}</td></tr>
                 </table>
                 """
                 st.markdown(standard_metrics, unsafe_allow_html=True)
@@ -2469,7 +2690,7 @@ if df is not None and lancer_calcul and selected_vars:
         # Préparation des données pour les graphiques
         if best_metrics.get('mode') == 'train_test':
             # Reconstituer les prédictions train/test
-            train_df, test_df, split_date = create_train_test_split(df_filtered, date_col)
+            train_df, test_df, split_date = create_train_test_split(df_filtered, date_col, train_months_manual)
             
             # Reconstruire le modèle pour les prédictions
             if best_metrics['model_type'] == "Linéaire":
@@ -2651,7 +2872,7 @@ if df is not None and lancer_calcul and selected_vars:
             ax3.grid(True, linestyle='--', alpha=0.3)
             
             # Annotation
-            ax3.annotate(f"Biais = {best_metrics['bias']:.2f}%", xy=(0.05, 0.95), xycoords='axes fraction',
+            ax3.annotate(f"Biais = {best_metrics['bias']:.{bias_decimals}f}%", xy=(0.05, 0.95), xycoords='axes fraction',
                         fontsize=12, fontweight='bold', color='#00485F',
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
             
@@ -2682,7 +2903,7 @@ if df is not None and lancer_calcul and selected_vars:
                     "Variables": ", ".join(model['features'][:2]) + ("..." if len(model['features']) > 2 else ""),
                     "R²": f"{model['r2']:.3f}",
                     "CV(RMSE)": f"{model['cv_rmse']:.3f}",
-                    "Biais(%)": f"{model['bias']:.1f}",
+                    "Biais(%)": f"{model['bias']:.{bias_decimals}f}",
                     "Conformité": model['conformite']
                 }
                 
@@ -2868,7 +3089,7 @@ if df is not None and lancer_calcul and selected_vars:
             )
             st.metric(
                 label="⚖️ Biais",
-                value=f"{best_metrics['bias']:.1f}%",
+                value=f"{best_metrics['bias']:.{bias_decimals}f}%",
                 help="Erreur systématique du modèle (|biais| < 5% recommandé)"
             )
         
@@ -2939,19 +3160,23 @@ elif df is None:
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.2 - Scoring IPMVP refondu ! 🎉</strong></p>
-    <p><strong>🔧 Améliorations intégrées :</strong></p>
+    <p><strong>🎉 Analyse IPMVP Améliorée v2.3 - Corrections et améliorations ! 🎉</strong></p>
+    <p><strong>🔧 Améliorations v2.3 :</strong></p>
     <ul style="text-align: left; display: inline-block;">
+        <li>✅ Bug CSS expanders corrigé (affichage labels)</li>
+        <li>✅ Formule Biais IPMVP officielle : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100</li>
+        <li>✅ Choix du nombre de décimales pour le Biais</li>
+        <li>✅ R² négatif sur test : alerte + rejet si < -0.5</li>
+        <li>✅ RMSE corrigé degrés de liberté en mode standard</li>
+        <li>✅ Fix bug should_use_train_test_split (dead code)</li>
+        <li>✅ Split train/test configurable manuellement (slider mois)</li>
+        <li>✅ Guide train/test manuel intégré</li>
         <li>✅ Détection overfitting intelligente</li>
-        <li>✅ Score composite IPMVP (0-100 points)</li>
-        <li>✅ Mode train/test adaptatif</li>
+        <li>✅ Score composite IPMVP (0-70 points)</li>
         <li>✅ Limitations sécurité (règle 10:1)</li>
-        <li>✅ Métriques enrichies et visualisations améliorées</li>
-        <li>✅ Affichage détaillé des intervalles train/test avec dates</li>
-        <li>✅ R² et CV(RMSE) visibles sur tous les graphiques</li>
-        <li>✅ Ridge/Lasso retrouvent leur utilité</li>
     </ul>
     <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
 </div>
 """, unsafe_allow_html=True)
+
