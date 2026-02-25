@@ -838,6 +838,23 @@ def calculate_bias_reel_cv(X, y, model, decimal_places=2):
     
     return equation
 
+def format_equation(intercept, coefficients, threshold=1e-4):
+    """
+    Formate l'équation du modèle de régression sous forme lisible.
+    Ignore les coefficients négligeables (< threshold).
+    """
+    try:
+        equation = f"Consommation = {intercept:.4f}"
+        sorted_coefs = sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)
+        for feature, coef in sorted_coefs:
+            if abs(coef) < threshold:
+                continue
+            sign = "+" if coef >= 0 else ""
+            equation += f" {sign} {coef:.4f} × {feature}"
+        return equation
+    except Exception:
+        return f"Consommation = {intercept:.4f} (coefficients non disponibles)"
+
 def tooltip(text, explanation):
     """
     Crée une info-bulle explicative
@@ -953,9 +970,13 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap');
 
-    html, body, [class*="st-"] {
+    html, body {
         font-family: 'Manrope', sans-serif;
         color: #0C1D2D;
+    }
+    
+    p, div, span, li, td, th, label {
+        font-family: 'Manrope', sans-serif;
     }
 
     h1, h2, h3 {
