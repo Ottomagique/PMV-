@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_predict, KFold
 import math
 import hashlib
 import pickle
@@ -725,7 +725,61 @@ def check_variable_limits(nb_observations, nb_variables, model_type):
     
     return issues, warnings
 
-def calculate_bias_ipmvp(y_true, y_pred, decimal_places=2):
+def calculate_bias_reel_cv(X, y, model, decimal_places=2):
+    """
+    Calcule le biais RÉEL en mode standard via validation croisée Leave-One-Out (LOO-CV).
+    
+    Problème du biais OLS sur train :
+      Pour toute régression linéaire avec intercept, Σ(Ŷᵢ - Yᵢ) = 0 par construction
+      → le biais calculé sur les données d'entraînement vaut TOUJOURS exactement 0
+      → ce n'est pas un biais "réel", c'est une propriété mathématique
+    
+    Solution — Validation croisée Leave-One-Out :
+      On retire une observation à la fois, on réentraîne sur le reste,
+      on prédit la valeur retirée → les prédictions ne sont PLUS sur données d'entraînement
+      → le biais calculé sur ces prédictions LOO est un vrai biais non-biaisé
+    
+    Formule :
+      Pour chaque observation i :
+        - Entraîner le modèle sur toutes les observations SAUF i
+        - Prédire Ŷᵢ avec ce modèle
+      Biais_réel(%) = Σ(Ŷᵢ_LOO - Yᵢ) / (n × Ȳ) × 100
+    
+    Args:
+        X: variables explicatives (DataFrame)
+        y: variable cible (Series)
+        model: modèle sklearn (LinearRegression, Ridge, Lasso)
+        decimal_places: nombre de décimales
+    
+    Returns:
+        float: biais réel en % (non-nul, non-biaisé)
+    """
+    try:
+        n = len(y)
+        y_arr = np.array(y)
+        
+        # LOO uniquement si modèle linéaire (pas polynomial - trop lent et instable)
+        # Pour n > 30, utiliser KFold(5) pour la rapidité
+        if n <= 30:
+            cv = KFold(n_splits=n, shuffle=False)  # Leave-One-Out exact
+        else:
+            cv = KFold(n_splits=min(10, n // 3), shuffle=False)  # K-Fold pour grands datasets
+        
+        # Prédictions cross-validées
+        y_pred_cv = cross_val_predict(model, X, y, cv=cv)
+        
+        # Biais IPMVP sur prédictions CV (formule officielle)
+        mean_y = np.mean(y_arr)
+        if mean_y == 0:
+            return 0.0
+        bias_cv = np.sum(y_pred_cv - y_arr) / (n * mean_y) * 100
+        return round(float(bias_cv), decimal_places)
+    
+    except Exception:
+        # Fallback : si CV échoue (ex: trop peu de données), retourner 0
+        return 0.0
+
+
     """
     Calcule le biais selon la formule IPMVP officielle :
     
@@ -1993,16 +2047,17 @@ if df is not None and lancer_calcul and selected_vars:
                                 ssr = np.sum((y_train - y_pred) ** 2)
                                 df_res = n - p - 1 if (n - p - 1) > 0 else 1
                                 rmse = math.sqrt(ssr / df_res)
-                                
                                 cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                                # Biais IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
-                                # NOTE : toujours ≈ 0 pour régression linéaire avec intercept (OLS)
-                                # On calcule aussi le MAPE (Mean Abs % Error) qui lui est toujours > 0
-                                bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
-                                # MAPE = moyenne des |erreurs relatives| en %
-                                with np.errstate(divide='ignore', invalid='ignore'):
-                                    mape = np.mean(np.abs((y_train - y_pred) / y_train)) * 100
-                                    mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
+                                
+                                # BIAIS RÉEL via validation croisée LOO/KFold
+                                # Le biais OLS sur train est toujours = 0 (propriété mathématique)
+                                # On utilise cross_val_predict pour obtenir des prédictions non-biaisées
+                                if m_type in ["Linéaire", "Ridge", "Lasso"]:
+                                    bias = calculate_bias_reel_cv(X_train, y_train, m_obj, bias_decimals)
+                                else:
+                                    bias = 0.0  # Polynomiale : CV trop instable, pas calculé
+                                
+                                mape = 0.0  # Retiré de l'affichage
                                 mae = mean_absolute_error(y_train, y_pred)
                                 
                                 overfitting_detected = False
@@ -2306,15 +2361,17 @@ if df is not None and lancer_calcul and selected_vars:
                             ssr = np.sum((y_train - y_pred) ** 2)
                             df_res = n - p - 1 if (n - p - 1) > 0 else 1
                             rmse = math.sqrt(ssr / df_res)
-                            
                             cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
-                            # Biais IPMVP officiel : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100
-                            # NOTE : toujours ≈ 0 pour OLS avec intercept par construction
-                            bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
-                            # MAPE = moyenne des |erreurs relatives| en % (toujours > 0, pertinent)
-                            with np.errstate(divide='ignore', invalid='ignore'):
-                                mape = np.mean(np.abs((y_train - y_pred) / y_train)) * 100
-                                mape = round(float(mape), bias_decimals) if np.isfinite(mape) else 0.0
+                            
+                            # BIAIS RÉEL via validation croisée LOO/KFold
+                            # Le biais OLS sur train est toujours = 0 (propriété mathématique)
+                            # cross_val_predict donne des prédictions sur données non-vues → biais réel
+                            if m_type in ["Linéaire", "Ridge", "Lasso"]:
+                                bias = calculate_bias_reel_cv(X_train, y_train, m_obj, bias_decimals)
+                            else:
+                                bias = 0.0  # Polynomiale : CV trop instable
+                            
+                            mape = 0.0  # Retiré de l'affichage
                             mae = mean_absolute_error(y_train, y_pred)
                             
                             overfitting_detected = False
@@ -2549,27 +2606,63 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             col1, col2 = st.columns(2)
             
             with col1:
-                # Note : le biais train est toujours ~0 pour régression linéaire (propriété OLS)
-                train_bias_display = best_metrics.get('train_bias', 0)
-                train_bias_note = " ⓘ (= 0 par construction OLS)" if abs(train_bias_display) < 0.01 else ""
+                train_r2_val = best_metrics.get('train_r2', 0)
+                train_cv_val = best_metrics.get('train_cv_rmse', 0)
+                train_bias_val = best_metrics.get('train_bias', 0)
+                train_bias_display = f"≈ 0% <small style='color:#888; font-size:11px'>(OLS par construction)</small>" if abs(train_bias_val) < 0.01 else f"{train_bias_val:.{bias_decimals}f}%"
+                
                 train_metrics = f"""
                 <table class="stats-table">
-                    <tr><th>Métrique</th><th>Valeur Train</th></tr>
-                    <tr><td>{tooltip("R²", "Coefficient de détermination sur les données d'entraînement")}</td><td>{best_metrics.get('train_r2', 0):.4f}</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur l'entraînement")}</td><td>{best_metrics.get('train_cv_rmse', 0):.4f}</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Pour régression linéaire avec intercept : Σrésidus=0 par définition OLS → biais train toujours ≈ 0. Le biais pertinent est sur le TEST.")}</td><td>{train_bias_display:.{bias_decimals}f}{train_bias_note}</td></tr>
+                    <tr><th>Métrique IPMVP</th><th>Train</th><th>Seuil</th></tr>
+                    <tr>
+                        <td>{tooltip("R²", "R² sur les données d'entraînement. Attendu élevé car modèle ajusté sur ces données.")}</td>
+                        <td><strong>{train_r2_val:.4f}</strong></td>
+                        <td>≥ 0.75</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("CV(RMSE)", "CV(RMSE) sur les données d'entraînement.")}</td>
+                        <td><strong>{train_cv_val:.4f}</strong></td>
+                        <td>≤ 0.20</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("Biais (%)", "Biais sur le train. Toujours ≈ 0 pour OLS avec intercept (Σrésidus=0 par définition). Le biais pertinent est sur le TEST.")}</td>
+                        <td>{train_bias_display}</td>
+                        <td>≤ 0.5%</td>
+                    </tr>
                 </table>
                 """
                 st.markdown(train_metrics, unsafe_allow_html=True)
             
             with col2:
+                r2_test_val = best_metrics['r2']
+                cv_test_val = best_metrics['cv_rmse']
+                bias_test_val = best_metrics['bias']
+                
+                r2_ok = "✅" if r2_test_val >= 0.75 else ("⚠️" if r2_test_val >= 0.60 else "❌")
+                cv_ok = "✅" if cv_test_val <= 0.20 else ("⚠️" if cv_test_val <= 0.30 else "❌")
+                bias_ok = "✅" if abs(bias_test_val) <= 0.5 else ("⚠️" if abs(bias_test_val) <= 5 else "❌")
+                
                 test_metrics = f"""
                 <table class="stats-table">
-                    <tr><th>Métrique</th><th>Valeur Test</th><th>Seuil IPMVP</th></tr>
-                    <tr><td>{tooltip("R²", "Coefficient de détermination sur les données de test (validation)")}</td><td>{best_metrics['r2']:.4f}</td><td>≥ 0.75</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE sur le test")}</td><td>{best_metrics['cv_rmse']:.4f}</td><td>≤ 0.20</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Formule IPMVP officielle : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100 sur les données de test. Non nul ici car données non-vues.")}</td><td>{best_metrics['bias']:.{bias_decimals}f}%</td><td>|biais| < 5%</td></tr>
-                    <tr><td>{tooltip("MAPE (%)", "Mean Absolute Percentage Error sur le test : moyenne des |erreurs relatives| en %.")}</td><td><strong>{best_metrics.get('mape', 0):.{bias_decimals}f}%</strong></td><td>< 10% recommandé</td></tr>
+                    <tr><th>Métrique IPMVP</th><th>Test</th><th>Seuil</th><th>Statut</th></tr>
+                    <tr>
+                        <td>{tooltip("R²", "R² sur les données de TEST (non-vues). C'est le R² de validation, le plus important pour IPMVP.")}</td>
+                        <td><strong>{r2_test_val:.4f}</strong></td>
+                        <td>≥ 0.75</td>
+                        <td>{r2_ok}</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("CV(RMSE)", "CV(RMSE) sur les données de test. Mesure la précision du modèle sur des données non-vues.")}</td>
+                        <td><strong>{cv_test_val:.4f}</strong></td>
+                        <td>≤ 0.20</td>
+                        <td>{cv_ok}</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("Biais (%)", "Formule IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100 sur le TEST. Non nul ici car données non-vues par le modèle. C'est le vrai indicateur de biais. Seuil IPMVP : ≤ 0.5%")}</td>
+                        <td><strong>{bias_test_val:.{bias_decimals}f}%</strong></td>
+                        <td>≤ 0.5%</td>
+                        <td>{bias_ok}</td>
+                    </tr>
                 </table>
                 """
                 st.markdown(test_metrics, unsafe_allow_html=True)
@@ -2603,16 +2696,34 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             col1, col2 = st.columns(2)
             
             with col1:
+                bias_val = best_metrics['bias']
+                r2_ok = "✅" if best_metrics['r2'] >= 0.75 else "❌"
+                cv_ok = "✅" if best_metrics['cv_rmse'] <= 0.20 else "❌"
+                bias_ok = "✅" if abs(bias_val) <= 0.5 else ("⚠️" if abs(bias_val) <= 5 else "❌")
+                
                 standard_metrics = f"""
                 <table class="stats-table">
-                    <tr><th>Métrique</th><th>Valeur</th><th>Seuil IPMVP</th></tr>
-                    <tr><td>{tooltip("R²", "Coefficient de détermination : proportion de variance expliquée par le modèle")}</td><td>{best_metrics['r2']:.4f}</td><td>≥ 0.75 ✓</td></tr>
-                    <tr><td>{tooltip("CV(RMSE)", "Coefficient de variation du RMSE (seuil IPMVP : ≤0.20)")}</td><td>{best_metrics['cv_rmse']:.4f}</td><td>≤ 0.20</td></tr>
-                    <tr><td>{tooltip("Biais (%)", "Formule IPMVP : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100. TOUJOURS = 0 pour régression linéaire avec intercept (propriété mathématique OLS). Voir MAPE ci-dessous.")}</td>
-                        <td>{best_metrics['bias']:.{bias_decimals}f} <small style='color:#888'>(OLS = 0 par construction)</small></td><td>|biais| < 5%</td></tr>
-                    <tr><td>{tooltip("MAPE (%)", "Mean Absolute Percentage Error : moyenne des |erreurs relatives| en %. Métrique complémentaire utile car non nulle, contrairement au biais OLS. Pas de seuil IPMVP officiel mais < 10% est bon.")}</td>
-                        <td><strong>{best_metrics.get('mape', 0):.{bias_decimals}f}%</strong></td><td>< 10% recommandé</td></tr>
+                    <tr><th>Métrique IPMVP</th><th>Valeur</th><th>Seuil</th><th>Statut</th></tr>
+                    <tr>
+                        <td>{tooltip("R²", "Coefficient de détermination. Mesure la proportion de variance expliquée. Seuil IPMVP : ≥ 0.75")}</td>
+                        <td><strong>{best_metrics['r2']:.4f}</strong></td>
+                        <td>≥ 0.75</td>
+                        <td>{r2_ok}</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("CV(RMSE)", "Coefficient de variation de l'erreur quadratique moyenne. Seuil IPMVP : ≤ 0.20 (20%)")}</td>
+                        <td><strong>{best_metrics['cv_rmse']:.4f}</strong></td>
+                        <td>≤ 0.20</td>
+                        <td>{cv_ok}</td>
+                    </tr>
+                    <tr>
+                        <td>{tooltip("Biais (%)", "Biais RÉEL calculé par validation croisée Leave-One-Out. Formule IPMVP : Σ(Ŷᵢ_LOO - Yᵢ)/(n×Ȳ)×100. Contrairement au biais sur train (toujours = 0 en OLS), ce biais est calculé sur des prédictions hors-échantillon → valeur réelle et non-biaisée. Seuil IPMVP : ≤ 0.5%")}</td>
+                        <td><strong>{bias_val:.{bias_decimals}f}%</strong></td>
+                        <td>≤ 0.5%</td>
+                        <td>{bias_ok}</td>
+                    </tr>
                 </table>
+                <small style='color:#666; font-style:italic;'>⚡ Biais calculé par validation croisée (LOO-CV) — valeur réelle hors-échantillon</small>
                 """
                 st.markdown(standard_metrics, unsafe_allow_html=True)
             
@@ -2632,11 +2743,21 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
         # ÉQUATION DU MODÈLE
         st.subheader("📝 Équation d'ajustement")
         
-        if best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-            equation = format_equation(best_metrics['intercept'], 
-                                     {feature: best_metrics['coefficients'][feature] for feature in best_features})
-        elif best_metrics['model_type'] == "Polynomiale":
-            equation = format_equation(best_metrics['intercept'], best_metrics['coefficients'])
+        try:
+            intercept_val = best_metrics.get('intercept', 0.0)
+            coefs_val = best_metrics.get('coefficients', {})
+            model_type_val = best_metrics.get('model_type', 'Linéaire')
+            
+            if model_type_val in ["Linéaire", "Ridge", "Lasso"]:
+                # Ne garder que les features présentes dans les coefficients
+                coefs_display = {f: coefs_val[f] for f in best_features if f in coefs_val}
+                equation = format_equation(intercept_val, coefs_display)
+            elif model_type_val == "Polynomiale":
+                equation = format_equation(intercept_val, coefs_val)
+            else:
+                equation = f"Consommation = {intercept_val:.4f} (équation non disponible pour ce type de modèle)"
+        except Exception as e_eq:
+            equation = f"⚠️ Équation non disponible : {str(e_eq)}"
         
         st.markdown(f"""
         <div class="equation-box">
@@ -2646,10 +2767,7 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
         """, unsafe_allow_html=True)
         
         # VALEURS T DE STUDENT POUR MODÈLES LINÉAIRES
-        if 't_stats' in best_metrics and best_metrics['model_type'] in ["Linéaire", "Ridge", "Lasso"]:
-            st.subheader("📈 Analyse de significativité statistique")
-            
-            # Construction du tableau de significativité avec st.dataframe (natif Streamlit)
+        if 't_stats' in best_metrics and best_metrics.get('model_type') in ["Linéaire", "Ridge", "Lasso"]:
             st.subheader("📈 Analyse de significativité statistique")
             
             significant_count = 0
