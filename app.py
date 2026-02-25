@@ -725,6 +725,33 @@ def check_variable_limits(nb_observations, nb_variables, model_type):
     
     return issues, warnings
 
+def calculate_bias_ipmvp(y_true, y_pred, decimal_places=2):
+    """
+    Calcule le biais IPMVP officiel sur un jeu de données (train OU test).
+    
+    Formule officielle IPMVP :
+      Biais(%) = Σ(Ŷᵢ - Yᵢ) / (n × Ȳ) × 100
+    
+    Args:
+        y_true : valeurs réelles (Series ou array)
+        y_pred : valeurs prédites (array)
+        decimal_places : nombre de décimales
+    Returns:
+        float : biais en %
+    """
+    try:
+        y_true = np.array(y_true)
+        y_pred = np.array(y_pred)
+        n = len(y_true)
+        mean_y = np.mean(y_true)
+        if mean_y == 0 or n == 0:
+            return 0.0
+        bias = np.sum(y_pred - y_true) / (n * mean_y) * 100
+        return round(float(bias), decimal_places)
+    except Exception:
+        return 0.0
+
+
 def calculate_bias_reel_cv(X, y, model, decimal_places=2):
     """
     Calcule le biais RÉEL en mode standard via validation croisée Leave-One-Out (LOO-CV).
