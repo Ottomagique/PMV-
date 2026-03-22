@@ -1,6 +1,6 @@
 # =============================================================================
 # PARTIE 1 : BASE + AUTHENTIFICATION
-# Application IPMVP Améliorée - Version 2.6 - Seuils IPMVP corrigés + Train/Test ≥18 mois
+# Calculette IPMVP - Modélisation ligne de base énergétique - Conformité IPMVP
 # =============================================================================
 
 import streamlit as st
@@ -26,7 +26,7 @@ warnings.filterwarnings('ignore')
 
 # 📌 Configuration de la page
 st.set_page_config(
-    page_title="Analyse IPMVP Améliorée",
+    page_title="Calculette IPMVP",
     page_icon="📊",
     layout="wide"
 )
@@ -233,7 +233,7 @@ def show_login_form():
     # Pied de page
     st.markdown("""
     <div class="glass-footer">
-        <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
+        <p style="font-size:0.85em; opacity:0.8;">Efficacité Energétique & Carbone team</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1340,71 +1340,47 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # TITRE ET DESCRIPTION PRINCIPALE
-st.title("📊 Analyse IPMVP Améliorée")
 st.markdown("""
-Bienvenue dans **l'Analyse IPMVP Améliorée** ! 🚀  
-Cette version inclut la **détection d'overfitting**, le **scoring composite**, et la **validation train/test** pour des analyses plus robustes.
-""")
+<div style="padding: 28px 0 8px 0;">
+    <h1 style="font-size:2.2em; font-weight:800; color:#00485F; margin:0; letter-spacing:-0.5px;">
+        Calculette IPMVP
+    </h1>
+    <p style="color:#555; font-size:1.05em; margin-top:6px; font-weight:400;">
+        Modélisation de la ligne de base énergétique · Scoring IPMVP · Validation train/test
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-# GUIDE D'UTILISATION AMÉLIORÉ
+# GUIDE D'UTILISATION
 st.markdown("""
 <div class="instruction-card">
-<h3>🛠️ Guide d'utilisation - Version Améliorée</h3>
-<h4>📋 Nouveautés de cette version :</h4>
-<ul>
-    <li><strong>🛡️ Détection d'overfitting intelligente</strong> : Rejet automatique des modèles avec R² artificiellement gonflé</li>
-    <li><strong>🎯 Score composite IPMVP</strong> : Sélection des modèles basée sur un score 0-70 points (R² + CV(RMSE) + simplicité + significativité)</li>
-    <li><strong>🚀 Mode train/test adaptatif</strong> : Split automatique activé dès ≥18 mois de données (12 train min + ≥6 test)</li>
-    <li><strong>⚠️ Limitations sécurité</strong> : Contrôle du ratio observations/variables (règle 10:1)</li>
-    <li><strong>📊 Métriques enrichies</strong> : Comparaison train/test, valeurs t de Student, warnings intelligents</li>
-</ul>
-
-<h4>🔄 Flux d'analyse intelligent :</h4>
-<ol>
-    <li><strong>Validation des données</strong> : Vérification qualité, détection anomalies</li>
-    <li><strong>Mode adaptatif</strong> : 
-        <ul>
-            <li>≥18 mois → Mode "Validation robuste" avec train/test</li>
-            <li>12-23 mois → Mode "IPMVP standard" avec protections renforcées</li>
-        </ul>
-    </li>
-    <li><strong>Limitations automatiques</strong> : 
-        <ul>
-            <li>Variables max = nb_observations ÷ 10</li>
-            <li>Polynôme seulement si ≥20 observations</li>
-        </ul>
-    </li>
-    <li><strong>Sélection intelligente</strong> : Score composite privilégiant robustesse + simplicité</li>
-    <li><strong>Résultats enrichis</strong> : Métriques avancées, warnings, recommandations</li>
-</ol>
-
-<h4>✂️ Guide : Faire un split Train/Test manuellement :</h4>
-<ol>
-    <li><strong>Principe IPMVP</strong> : Le modèle est entraîné sur une période de référence (baseline), puis validé sur une période de suivi (test)</li>
-    <li><strong>Choisir les mois de train</strong> (slider "Mois d'entraînement") :
-        <ul>
-            <li>≥12 mois de train recommandés (couvrir toutes les saisons)</li>
-            <li>≥3 mois de test pour une validation statistiquement représentative</li>
-            <li>Exemple 24 mois de données : 18 train + 6 test → bonne pratique</li>
-        </ul>
-    </li>
-    <li><strong>Interpréter les résultats</strong> :
-        <ul>
-            <li>R² train > R² test → normal (légère dégradation attendue)</li>
-            <li>R² test < 0 → modèle invalide sur cette période (changer le split)</li>
-            <li>Écart R² train/test > 0.2 → overfitting probable</li>
-        </ul>
-    </li>
-</ol>
-
-<h4>✅ Critères de qualité IPMVP renforcés :</h4>
-<ul>
-    <li><strong>R² ≥ 0.75</strong> : Corrélation excellente</li>
-    <li><strong>CV(RMSE) ≤ 15%</strong> : Précision excellente</li>
-    <li><strong>|Biais| < 5%</strong> : Ajustement équilibré</li>
-    <li><strong>Variables significatives</strong> : |t| > 2 (p-value < 0.05)</li>
-    <li><strong>Ratio obs/var ≥ 10:1</strong> : Données suffisantes</li>
-</ul>
+<h3>Guide d'utilisation</h3>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:10px;">
+    <div>
+        <h4>Etapes</h4>
+        <ol style="margin:0; padding-left:18px; line-height:1.9;">
+            <li>Importer un fichier Excel (date + consommation + variables)</li>
+            <li>Vérifier la détection automatique des colonnes</li>
+            <li>Sélectionner les variables explicatives (DJU, occupation…)</li>
+            <li>Choisir le type de modèle — <em>Automatique</em> recommandé</li>
+            <li>Lancer l'analyse et consulter le score IPMVP</li>
+        </ol>
+    </div>
+    <div>
+        <h4>Critères IPMVP</h4>
+        <table style="width:100%; border-collapse:collapse; font-size:0.92em;">
+            <tr><td style="padding:4px 8px;"><strong>R²</strong></td><td style="padding:4px 8px; color:#00485F;">≥ 0.75</td></tr>
+            <tr style="background:rgba(109,186,188,0.08);"><td style="padding:4px 8px;"><strong>CV(RMSE)</strong></td><td style="padding:4px 8px; color:#00485F;">≤ 20%</td></tr>
+            <tr><td style="padding:4px 8px;"><strong>Biais</strong></td><td style="padding:4px 8px; color:#00485F;">≤ 5%</td></tr>
+            <tr style="background:rgba(109,186,188,0.08);"><td style="padding:4px 8px;"><strong>T-stat</strong></td><td style="padding:4px 8px; color:#00485F;">|t| > 2</td></tr>
+            <tr><td style="padding:4px 8px;"><strong>Ratio obs/var</strong></td><td style="padding:4px 8px; color:#00485F;">≥ 10:1</td></tr>
+        </table>
+        <p style="margin-top:10px; font-size:0.88em; color:#555;">
+            <strong>Mode train/test</strong> activé automatiquement dès ≥ 18 mois de données.<br>
+            Train ≥ 12 mois · Test ≥ 1 mois · Train ≥ Test
+        </p>
+    </div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1655,6 +1631,11 @@ else:
     max_features = st.sidebar.slider("🔢 Nombre de variables à tester", 1, 4, 2)
 
 # Paramètres spécifiques aux modèles avec validation
+# Valeurs par défaut (utilisées en mode Automatique)
+alpha_ridge = 1.0
+alpha_lasso = 0.1
+poly_degree = 2
+
 if model_type == "Ridge":
     alpha_ridge = st.sidebar.slider("Alpha (régularisation Ridge)", 0.01, 10.0, 1.0, 0.01)
 elif model_type == "Lasso":
@@ -1679,8 +1660,6 @@ bias_decimals = st.sidebar.selectbox(
     help="Nombre de décimales pour afficher le biais IPMVP. Formule : Σ(Ŷᵢ-Yᵢ)/(n×Ȳ)×100"
 )
 
-# SPLIT TRAIN/TEST MANUEL
-st.sidebar.subheader("✂️ Paramètres Train/Test")
 # SPLIT TRAIN/TEST MANUEL
 st.sidebar.subheader("✂️ Paramètres Train/Test")
 
@@ -1851,9 +1830,9 @@ if st.sidebar.button("🚪 Déconnexion", key="sidebar_logout", use_container_wi
 st.markdown("---")
 st.markdown("""
 <div class="footer-credit">
-    <p><strong>📊 Analyse IPMVP Améliorée v2.0</strong></p>
-    <p>✨ <strong>Nouveautés :</strong> Détection overfitting • Score composite • Train/Test split • Limitations sécurité</p>
-    <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
+    <p style="font-size:0.85em; opacity:0.7; margin:0;">
+        Calculette IPMVP &nbsp;·&nbsp; Détection overfitting &nbsp;·&nbsp; Score composite &nbsp;·&nbsp; Validation train/test
+    </p>
 </div>
 """, unsafe_allow_html=True)
 # =============================================================================
@@ -2650,7 +2629,20 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             # Récupération des métriques train
             train_r2_val    = best_metrics.get('train_r2', 0)
             train_cv_val    = best_metrics.get('train_cv_rmse', 0)
-            train_bias_val  = best_metrics.get('train_bias', 0)
+            # Biais TRAIN : calculé via LOO-CV (validation croisée) sur la période d'entraînement
+            _m_type_train = best_metrics.get('model_type', 'Linéaire')
+            if _m_type_train in ["Linéaire", "Ridge", "Lasso"]:
+                _X_tr = train_df_temp[best_features].apply(pd.to_numeric, errors='coerce').dropna()
+                _y_tr = pd.to_numeric(train_df_temp[conso_col], errors='coerce').dropna()
+                if _m_type_train == "Linéaire":
+                    _m_bias = LinearRegression()
+                elif _m_type_train == "Ridge":
+                    _m_bias = Ridge(alpha=1.0)
+                else:
+                    _m_bias = Lasso(alpha=0.1)
+                train_bias_val = calculate_bias_reel_cv(_X_tr, _y_tr, _m_bias, bias_decimals)
+            else:
+                train_bias_val = best_metrics.get('train_bias', 0)
             # Récupération des métriques test
             test_r2_val     = best_metrics.get('test_r2', best_metrics['r2'])
             test_cv_val     = best_metrics.get('test_cv_rmse', best_metrics['cv_rmse'])
@@ -2663,17 +2655,6 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             
             col_train, col_test = st.columns(2)
             with col_train:
-                # Biais TRAIN : toujours = 0 pour OLS/Ridge/Lasso par construction mathématique
-                # Σ(Ŷ-Y) = 0 est une propriété algébrique de toute régression avec intercept
-                # On affiche la vraie valeur arrondie à 2 décimales max pour éviter 0.0000000%
-                train_bias_display = f"≈ 0.00% (OLS)"
-                train_bias_note = "ℹ️ Le biais sur les données d'entraînement est toujours ≈ 0 par construction (propriété OLS)"
-                tbias_ok = "ℹ️"
-                # Pour Ridge/Lasso : le biais peut être légèrement non nul → afficher la vraie valeur
-                if best_metrics.get('model_type') in ["Ridge", "Lasso"] and abs(train_bias_val) > 0.01:
-                    train_bias_display = f"{train_bias_val:.{bias_decimals}f}%"
-                    train_bias_note = "ℹ️ Biais sur données d'entraînement (régularisation peut induire un léger biais)"
-                    tbias_ok = "✅" if abs(train_bias_val) <= 5 else ("⚠️" if abs(train_bias_val) <= 10 else "❌")
                 # Statuts train
                 tr2_ok  = "✅" if train_r2_val  >= 0.75 else ("⚠️" if train_r2_val  >= 0.60 else "❌")
                 tcv_ok  = "✅" if train_cv_val  <= 0.20 else ("⚠️" if train_cv_val  <= 0.30 else "❌")
@@ -2704,12 +2685,12 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         </tr>
                         <tr>
                             <td style="padding:6px 8px;">Biais (%)</td>
-                            <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_bias_display}</td>
+                            <td style="padding:6px 8px; text-align:center; font-weight:bold;">{train_bias_val:.{bias_decimals}f}%</td>
                             <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
-                            <td style="padding:6px 8px; text-align:center;">{tbias_ok}</td>
+                            <td style="padding:6px 8px; text-align:center;">{"✅" if abs(train_bias_val) <= 5 else ("⚠️" if abs(train_bias_val) <= 10 else "❌")}</td>
                         </tr>
                     </table>
-                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">{train_bias_note}</p>
+                    <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Biais calculé par validation croisée LOO sur les données d'entraînement.</p>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -2988,143 +2969,124 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
             train_indices = range(len(y_all))
             test_indices = []
         
-        # Configuration matplotlib avec thème IPMVP
-        plt.style.use('seaborn-v0_8-whitegrid')
+        # ── Configuration matplotlib globale ──────────────────────────────────
         plt.rcParams.update({
-            'axes.facecolor': '#F5F5F5',
+            'font.family': 'sans-serif',
+            'axes.facecolor': '#FAFAFA',
             'figure.facecolor': '#E7DDD9',
-            'axes.edgecolor': '#00485F',
+            'axes.edgecolor': '#CCCCCC',
             'axes.labelcolor': '#00485F',
             'axes.titlecolor': '#00485F',
-            'xtick.color': '#0C1D2D',
-            'ytick.color': '#0C1D2D',
-            'grid.color': '#00485F',
-            'grid.alpha': 0.1
+            'xtick.color': '#444444',
+            'ytick.color': '#444444',
+            'grid.color': '#DDDDDD',
+            'grid.alpha': 0.6,
         })
-        
-        # GRAPHIQUE 1: Comparaison temporelle avec distinction train/test
-        fig, ax = plt.subplots(figsize=(14, 8))
-        
-        if best_metrics.get('mode') == 'train_test':
-            # Affichage train
-            ax.bar(train_indices, y_all.iloc[train_indices], color="#96B91D", alpha=0.7, label="Consommation mesurée (Train)", width=0.8)
-            ax.plot(train_indices, y_pred_all[train_indices], color="#2E7D32", marker='o', linewidth=2.5, markersize=5, label="Consommation ajustée (Train)")
-            
-            # Affichage test
-            ax.bar(test_indices, y_all.iloc[test_indices], color="#6DBABC", alpha=0.7, label="Consommation mesurée (Test)", width=0.8)
-            ax.plot(test_indices, y_pred_all[test_indices], color="#00485F", marker='s', linewidth=2.5, markersize=5, label="Consommation ajustée (Test)")
-            
-            # Ligne de séparation
-            if len(train_indices) > 0:
-                ax.axvline(x=max(train_indices), color='red', linestyle='--', linewidth=2, alpha=0.7, label='Séparation Train/Test')
-            
-            title_suffix = f" (Train: {len(train_indices)} pts, Test: {len(test_indices)} pts)"
+
+        # ── Conversion en numpy (évite bug indexation pandas Series) ─────────
+        y_all_arr   = np.array(y_all)
+        y_pred_arr  = np.array(y_pred_all)
+        residus_arr = y_all_arr - y_pred_arr
+        train_idx   = list(train_indices)
+        test_idx    = list(test_indices)
+        mode_tt     = best_metrics.get('mode') == 'train_test'
+
+        # ── GRAPHIQUE 1 : Mesurée vs Ajustée (temporel) ──────────────────────
+        fig, ax = plt.subplots(figsize=(14, 6))
+        x_all = np.arange(len(y_all_arr))
+
+        if mode_tt:
+            ax.bar(train_idx, y_all_arr[train_idx],  color="#96B91D", alpha=0.65, width=0.8, label="Mesurée — Train")
+            ax.bar(test_idx,  y_all_arr[test_idx],   color="#6DBABC", alpha=0.65, width=0.8, label="Mesurée — Test")
+            ax.plot(train_idx, y_pred_arr[train_idx], color="#2E7D32", marker='o', linewidth=2, markersize=4, label="Ajustée — Train")
+            ax.plot(test_idx,  y_pred_arr[test_idx],  color="#005F7A", marker='s', linewidth=2, markersize=4, label="Ajustée — Test")
+            if train_idx:
+                ax.axvline(x=max(train_idx) + 0.5, color='#CC3333', linestyle='--', linewidth=1.5, alpha=0.8, label="Séparation Train / Test")
         else:
-            ax.bar(train_indices, y_all, color="#6DBABC", alpha=0.8, label="Consommation mesurée")
-            ax.plot(train_indices, y_pred_all, color="#96B91D", marker='o', linewidth=2.5, markersize=4, label="Consommation ajustée")
-            title_suffix = f" ({len(train_indices)} points)"
-        
-        ax.set_title(f"📊 Comparaison Consommation Mesurée vs Ajustée{title_suffix}", fontweight='bold', fontsize=16, pad=20)
-        ax.set_xlabel("Observations", fontweight='bold', fontsize=12)
-        ax.set_ylabel("Consommation", fontweight='bold', fontsize=12)
-        ax.legend(frameon=True, facecolor="#E7DDD9", edgecolor="#00485F", fontsize=10)
-        ax.grid(True, linestyle='--', alpha=0.3)
-        
-        # Annotations enrichies
-        # Score IPMVP
-        ax.annotate(f"Score IPMVP = {best_metrics['ipmvp_score']:.1f}/70", 
-                   xy=(0.02, 0.98), xycoords='axes fraction',
-                   fontsize=13, fontweight='bold', color='#00485F',
-                   bbox=dict(boxstyle="round,pad=0.5", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.9),
-                   verticalalignment='top')
-        
-        # R² et CV(RMSE)
-        metrics_text = f"R² = {best_metrics['r2']:.3f} | CV(RMSE) = {best_metrics['cv_rmse']:.3f}"
-        if best_metrics.get('mode') == 'train_test':
-            metrics_text += "\n(Mesuré sur Test Set)"
-        ax.annotate(metrics_text, 
-                   xy=(0.02, 0.88), xycoords='axes fraction',
-                   fontsize=11, color='#00485F',
-                   bbox=dict(boxstyle="round,pad=0.4", facecolor="#E7DDD9", edgecolor="#6DBABC", alpha=0.85),
-                   verticalalignment='top')
-        
-        # Nombre total de valeurs
-        ax.text(0.98, 0.02, f"Total: {len(y_all)} valeurs",
-               transform=ax.transAxes,
-               fontsize=10, color='#00485F',
-               bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#6DBABC", alpha=0.8),
-               verticalalignment='bottom', horizontalalignment='right')
-        
+            ax.bar(x_all, y_all_arr, color="#6DBABC", alpha=0.7, width=0.8, label="Mesurée")
+            ax.plot(x_all, y_pred_arr, color="#96B91D", marker='o', linewidth=2, markersize=4, label="Ajustée")
+
+        ax.set_title("Consommation mesurée vs ajustée", fontweight='bold', fontsize=15, pad=14)
+        ax.set_xlabel("Observations", fontsize=11)
+        ax.set_ylabel("Consommation", fontsize=11)
+        ax.legend(frameon=True, facecolor="white", edgecolor="#CCCCCC", fontsize=10, loc="upper left")
+        ax.grid(axis='y', linestyle='--', alpha=0.5)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        suffix    = " (Test)" if mode_tt else ""
+        annot_txt = f"R² = {best_metrics['r2']:.3f}{suffix}   CV(RMSE) = {best_metrics['cv_rmse']:.3f}{suffix}   Score IPMVP {best_metrics['ipmvp_score']:.1f}/70"
+        ax.annotate(annot_txt, xy=(0.5, 0.97), xycoords='axes fraction',
+                    fontsize=10, color='#00485F', ha='center', va='top',
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="#CCCCCC", alpha=0.9))
+
+        plt.tight_layout()
         st.pyplot(fig)
-        
-        # GRAPHIQUES 2 ET 3: Dispersion et résidus côte à côte
+        plt.close(fig)
+
+        # ── GRAPHIQUES 2 ET 3 : Dispersion + Résidus ─────────────────────────
         col1, col2 = st.columns(2)
-        
+
         with col1:
-            # Graphique de dispersion
-            fig2, ax2 = plt.subplots(figsize=(8, 8))
-            
-            if best_metrics.get('mode') == 'train_test':
-                scatter_train = ax2.scatter(y_all.iloc[train_indices], y_pred_all[train_indices], 
-                                          color="#96B91D", alpha=0.8, s=60, edgecolor='#2E7D32', linewidth=1, label="Train")
-                scatter_test = ax2.scatter(y_all.iloc[test_indices], y_pred_all[test_indices], 
-                                         color="#6DBABC", alpha=0.8, s=60, edgecolor='#00485F', linewidth=1, label="Test")
-                ax2.legend()
+            fig2, ax2 = plt.subplots(figsize=(7, 6))
+
+            if mode_tt:
+                ax2.scatter(y_all_arr[train_idx], y_pred_arr[train_idx],
+                            color="#96B91D", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, label="Train", zorder=3)
+                ax2.scatter(y_all_arr[test_idx],  y_pred_arr[test_idx],
+                            color="#6DBABC", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, label="Test",  zorder=4)
+                ax2.legend(frameon=True, facecolor="white", edgecolor="#CCCCCC", fontsize=10)
             else:
-                scatter = ax2.scatter(y_all, y_pred_all, color="#6DBABC", alpha=0.8, s=60, edgecolor='#00485F', linewidth=1)
-            
-            # Ligne de référence y=x
-            min_val = min(min(y_all), min(y_pred_all))
-            max_val = max(max(y_all), max(y_pred_all))
-            ax2.plot([min_val, max_val], [min_val, max_val], '--', color='#00485F', linewidth=2, alpha=0.8, label="Référence y=x")
-            
-            ax2.set_title("📈 Consommation Mesurée vs Prédite", fontweight='bold', fontsize=14)
-            ax2.set_xlabel("Consommation Mesurée", fontweight='bold')
-            ax2.set_ylabel("Consommation Prédite", fontweight='bold')
-            ax2.grid(True, linestyle='--', alpha=0.3)
-            
-            # Annotation
-            # Annotation enrichie
-        if best_metrics.get('mode') == 'train_test':
-            metrics_text = f"R² (Test) = {best_metrics['r2']:.4f}\nCV(RMSE) = {best_metrics['cv_rmse']:.3f}"
-        else:
-            metrics_text = f"R² = {best_metrics['r2']:.4f}\nCV(RMSE) = {best_metrics['cv_rmse']:.3f}"
-        ax2.annotate(metrics_text, xy=(0.05, 0.95), xycoords='axes fraction',
-                        fontsize=11, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8),
-                        verticalalignment='top')
-            
-        st.pyplot(fig2)
-        
+                ax2.scatter(y_all_arr, y_pred_arr,
+                            color="#6DBABC", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, zorder=3)
+
+            _mn = min(y_all_arr.min(), y_pred_arr.min()) * 0.97
+            _mx = max(y_all_arr.max(), y_pred_arr.max()) * 1.03
+            ax2.plot([_mn, _mx], [_mn, _mx], '--', color='#00485F', linewidth=1.5, alpha=0.7, label="Droite ideale")
+
+            r2_disp = f"R2 (Test) = {best_metrics['r2']:.4f}" if mode_tt else f"R2 = {best_metrics['r2']:.4f}"
+            ax2.annotate(r2_disp, xy=(0.05, 0.95), xycoords='axes fraction',
+                         fontsize=11, fontweight='bold', color='#00485F', va='top',
+                         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#CCCCCC", alpha=0.9))
+
+            ax2.set_title("Mesurée vs Prédite", fontweight='bold', fontsize=13)
+            ax2.set_xlabel("Consommation mesurée", fontsize=10)
+            ax2.set_ylabel("Consommation prédite", fontsize=10)
+            ax2.grid(linestyle='--', alpha=0.4)
+            ax2.spines['top'].set_visible(False)
+            ax2.spines['right'].set_visible(False)
+            plt.tight_layout()
+            st.pyplot(fig2)
+            plt.close(fig2)
+
         with col2:
-            # Analyse des résidus
-            residus = y_all - y_pred_all
-            
-            fig3, ax3 = plt.subplots(figsize=(8, 8))
-            
-            if best_metrics.get('mode') == 'train_test':
-                ax3.scatter(train_indices, residus[train_indices], color="#96B91D", alpha=0.8, s=60, 
-                           edgecolor='#2E7D32', linewidth=1, label="Résidus Train")
-                ax3.scatter(test_indices, residus[test_indices], color="#6DBABC", alpha=0.8, s=60, 
-                           edgecolor='#00485F', linewidth=1, label="Résidus Test")
-                ax3.legend()
+            fig3, ax3 = plt.subplots(figsize=(7, 6))
+
+            if mode_tt:
+                ax3.scatter(train_idx, residus_arr[train_idx],
+                            color="#96B91D", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, label="Train", zorder=3)
+                ax3.scatter(test_idx,  residus_arr[test_idx],
+                            color="#6DBABC", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, label="Test",  zorder=4)
+                ax3.legend(frameon=True, facecolor="white", edgecolor="#CCCCCC", fontsize=10)
             else:
-                ax3.scatter(range(len(residus)), residus, color="#96B91D", alpha=0.8, s=60, 
-                           edgecolor='#2E7D32', linewidth=1)
-            
-            ax3.axhline(y=0, color='#00485F', linestyle='-', alpha=0.8, linewidth=2)
-            ax3.set_title("📉 Analyse des Résidus", fontweight='bold', fontsize=14)
-            ax3.set_xlabel("Observations", fontweight='bold')
-            ax3.set_ylabel("Résidus", fontweight='bold')
-            ax3.grid(True, linestyle='--', alpha=0.3)
-            
-            # Annotation
-            ax3.annotate(f"Biais = {best_metrics['bias']:.{bias_decimals}f}%", xy=(0.05, 0.95), xycoords='axes fraction',
-                        fontsize=12, fontweight='bold', color='#00485F',
-                        bbox=dict(boxstyle="round,pad=0.3", facecolor="#E7DDD9", edgecolor="#00485F", alpha=0.8))
-            
+                ax3.scatter(range(len(residus_arr)), residus_arr,
+                            color="#96B91D", alpha=0.85, s=55, edgecolor='white', linewidth=0.5, zorder=3)
+
+            ax3.axhline(y=0, color='#CC3333', linestyle='--', linewidth=1.5, alpha=0.8)
+            ax3.annotate(f"Biais = {best_metrics['bias']:.{bias_decimals}f}%",
+                         xy=(0.05, 0.95), xycoords='axes fraction',
+                         fontsize=11, fontweight='bold', color='#00485F', va='top',
+                         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#CCCCCC", alpha=0.9))
+
+            ax3.set_title("Residus", fontweight='bold', fontsize=13)
+            ax3.set_xlabel("Observations", fontsize=10)
+            ax3.set_ylabel("Residu (mesure - predit)", fontsize=10)
+            ax3.grid(linestyle='--', alpha=0.4)
+            ax3.spines['top'].set_visible(False)
+            ax3.spines['right'].set_visible(False)
+            plt.tight_layout()
             st.pyplot(fig3)
-        
+            plt.close(fig3)
         # TABLEAU DE CLASSEMENT DES MODÈLES AVEC SCORE COMPOSITE
         st.subheader("🏆 Classement des modèles (Score composite IPMVP)")
         
@@ -3406,17 +3368,30 @@ elif df is None:
 # PIED DE PAGE FINAL
 st.markdown("---")
 st.markdown("""
-<div class="footer-credit">
-    <p><strong>🎉 Analyse IPMVP Améliorée v2.6 - Seuils IPMVP corrigés + Train/Test ≥18 mois ! 🎉</strong></p>
-    <p><strong>🔧 Nouveautés v2.6 :</strong></p>
-    <ul style="text-align: left; display: inline-block;">
-        <li>✅ Mode Train/Test déclenché dès ≥18 mois (conforme IPMVP — au lieu de >12)</li>
-        <li>✅ Seuil CV(RMSE) affiché à ≤ 0.20 (confirmé)</li>
-        <li>✅ Seuil Biais corrigé à ≤ 5% (standard IPMVP officiel)</li>
-        <li>✅ Biais TRAIN affiché avec statut réel (Ridge/Lasso) au lieu de toujours ℹ️</li>
-        <li>✅ Dates affichées en format Mois/Année (lisibilité améliorée)</li>
-    </ul>
-    <p>Développé avec ❤️ par <strong>Efficacité Energétique, Carbone & RSE team</strong> © 2025</p>
-    <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
+<div style="
+    background: linear-gradient(135deg, #00485F 0%, #005F7A 100%);
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+">
+    <div>
+        <p style="color:white; font-size:1.1em; font-weight:700; margin:0;">Calculette IPMVP</p>
+        <p style="color:rgba(255,255,255,0.65); font-size:0.82em; margin:4px 0 0 0;">
+            Modélisation · Scoring · Validation · Conformité IPMVP
+        </p>
+    </div>
+    <div style="text-align:right;">
+        <p style="color:rgba(255,255,255,0.5); font-size:0.78em; margin:0;">
+            R² &nbsp;·&nbsp; CV(RMSE) &nbsp;·&nbsp; Biais &nbsp;·&nbsp; T-stats
+        </p>
+        <p style="color:rgba(255,255,255,0.35); font-size:0.72em; margin:4px 0 0 0;">
+            Efficacité Energétique & Carbone team
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
