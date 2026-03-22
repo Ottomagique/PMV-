@@ -1790,11 +1790,7 @@ st.sidebar.markdown(f"""
 - **Correct** : 25-34/70 points
 - **Non conforme** : < 25/70 points
 
-**⚖️ Formule Biais IPMVP officielle :**
-Biais(%) = Σ(Ŷᵢ-Yᵢ) / (n×Ȳ) × 100
-- Ŷᵢ = valeur prédite, Yᵢ = valeur réelle
-- n = nombre d'obs, Ȳ = moyenne réelle
-- Seuil recommandé : |Biais| < 5%
+- Seuil recommandé : **|Biais| < 5%**
 """, unsafe_allow_html=True)
 
 # INFORMATIONS SUR LES MODÈLES AVEC AMÉLIORATIONS
@@ -2084,12 +2080,11 @@ if df is not None and lancer_calcul and selected_vars:
                                 cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
                                 
                                 # BIAIS RÉEL via validation croisée LOO/KFold
-                                # Le biais OLS sur train est toujours = 0 (propriété mathématique)
-                                # On utilise cross_val_predict pour obtenir des prédictions non-biaisées
-                                if m_type in ["Linéaire", "Ridge", "Lasso"]:
-                                    bias = calculate_bias_reel_cv(X_train, y_train, m_obj, bias_decimals)
-                                else:
-                                    bias = 0.0  # Polynomiale : CV trop instable, pas calculé
+                                # BIAIS IPMVP officiel : Σ(Ŷᵢ - Yᵢ) / (n × Ȳ) × 100
+                                # Appliqué sur les données d'ajustement (formule prescrite IPMVP)
+                                # OLS linéaire → 0 par propriété algébrique (normal et attendu IPMVP)
+                                # Ridge/Lasso → légèrement non nul (régularisation)
+                                bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
                                 
                                 mape = 0.0  # Retiré de l'affichage
                                 mae = mean_absolute_error(y_train, y_pred)
@@ -2404,12 +2399,11 @@ if df is not None and lancer_calcul and selected_vars:
                             cv_rmse = rmse / np.mean(y_train) if np.mean(y_train) != 0 else float('inf')
                             
                             # BIAIS RÉEL via validation croisée LOO/KFold
-                            # Le biais OLS sur train est toujours = 0 (propriété mathématique)
-                            # cross_val_predict donne des prédictions sur données non-vues → biais réel
-                            if m_type in ["Linéaire", "Ridge", "Lasso"]:
-                                bias = calculate_bias_reel_cv(X_train, y_train, m_obj, bias_decimals)
-                            else:
-                                bias = 0.0  # Polynomiale : CV trop instable
+                            # BIAIS IPMVP officiel : Σ(Ŷᵢ - Yᵢ) / (n × Ȳ) × 100
+                            # Appliqué sur les données d'ajustement (formule prescrite IPMVP)
+                            # OLS linéaire → 0 par propriété algébrique (normal et attendu IPMVP)
+                            # Ridge/Lasso → légèrement non nul (régularisation)
+                            bias = calculate_bias_ipmvp(y_train, y_pred, bias_decimals)
                             
                             mape = 0.0  # Retiré de l'affichage
                             mae = mean_absolute_error(y_train, y_pred)
@@ -2545,7 +2539,7 @@ if df is not None and lancer_calcul and selected_vars:
                     "Variables": ', '.join(m.get('features', [])),
                     "R²": round(m['r2'], 4),
                     "CV(RMSE)": round(m['cv_rmse'], 4),
-                    "Biais (%)": round(m["bias"], bias_decimals),
+                    "Biais (%)": round(m['bias'], 2),
                     "Score IPMVP": round(m['ipmvp_score'], 1),
                     "Qualification": qualification_label,
                 }
@@ -2805,13 +2799,13 @@ le test ({len(df_filtered) - train_months_manual} mois) était plus long que le 
                         <td style="padding:6px 8px; text-align:center;">{cv_ok_s}</td>
                     </tr>
                     <tr>
-                        <td style="padding:6px 8px;">Biais LOO-CV (%)</td>
+                        <td style="padding:6px 8px;">Biais (%)</td>
                         <td style="padding:6px 8px; text-align:center; font-weight:bold;">{bias_std:.{bias_decimals}f}%</td>
                         <td style="padding:6px 8px; text-align:center; color:#666;">≤ 5%</td>
                         <td style="padding:6px 8px; text-align:center;">{bias_ok_s}</td>
                     </tr>
                 </table>
-                <p style="margin:8px 0 0 0; font-size:0.82em; color:#666;">ℹ️ Mode standard — biais calculé par validation croisée LOO (Leave-One-Out)</p>
+
             </div>
             """, unsafe_allow_html=True)
         
