@@ -2545,7 +2545,7 @@ if df is not None and lancer_calcul and selected_vars:
                     "Variables": ', '.join(m.get('features', [])),
                     "R²": round(m['r2'], 4),
                     "CV(RMSE)": round(m['cv_rmse'], 4),
-                    "Biais (%)": round(m['bias'], 2),
+                    "Biais (%)": round(m["bias"], bias_decimals),
                     "Score IPMVP": round(m['ipmvp_score'], 1),
                     "Qualification": qualification_label,
                 }
@@ -3426,4 +3426,3 @@ st.markdown("""
     <p><em>"Plus de R² à 99% bidons, place aux modèles robustes !" 🚀</em></p>
 </div>
 """, unsafe_allow_html=True)
-
